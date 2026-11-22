@@ -1,5 +1,5 @@
 // The screens' building blocks at design size. Every coordinate is px on the 207 x 169 device
-// (Frame 1.svg with the device origin subtracted: main page −262,−39, chaos page −470,−39).
+// (Frame 2.svg with the device origin subtracted: main page −46,−32, chaos page −272,−32).
 
 export interface Box {
   x: number;

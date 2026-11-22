@@ -1,6 +1,6 @@
 // The Choco Arpegio skin: the device (device/device.svg) with its screen, plain DOM, used by every host through
 // SkinBridge. It never knows which host runs it. All classes start with "ca-".
-// Layout = the design (Frame 1.svg): a main page and a chaos page on the one screen, SHUFFLE and CHAOS below.
+// Layout = the design (Frame 2.svg): a main page and a chaos page on the one screen, SHUFFLE and CHAOS below.
 
 import { DEVICE, deviceMarkup } from './device/device';
 import chaosPictureUrl from './assets/chaos-picture.png';
@@ -77,6 +77,14 @@ export function lengthText(a: number, b: number): string {
   return `LEN ${shortPow2(a)}-${shortPow2(b)}`;
 }
 
+/** SUS row: "SUS (a-b)" as in the design; shorter forms past 13 characters (it runs into the slider). */
+export function sustainText(a: number, b: number): string {
+  for (const t of [`SUS (${rangeText(a, b)})`, `SUS ${rangeText(a, b)}`]) {
+    if (t.length <= 13) return t;
+  }
+  return `SUS ${shortPow2(a)}-${shortPow2(b)}`;
+}
+
 /** Renders the skin into `container` at design size (DEVICE, 207 x 169). Returns the unmount function. */
 export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => void {
   const doc = container.ownerDocument;
@@ -114,7 +122,7 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
   device.innerHTML = deviceMarkup();
   root.append(device);
 
-  // ---- main page (design − 262,−39) ----
+  // ---- main page (design − 46,−32) ----
   const main = div(doc, 'ca-page');
   const loopText = label(doc, '', 21.04, 19.71);
   const loop = new PixelSlider(doc, 102, 188, 23, scaleOf('loop'), 1, 'Loop length');
@@ -125,23 +133,27 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
     set('noteLengthMin', a, g);
     set('noteLengthMax', b, g);
   };
-  const swingText = label(doc, 'SWING', 21.04, 55.71);
-  const swing = new PixelSlider(doc, 102, 188, 59, scaleOf('swing'), 1, 'Swing');
+  // Swing and RNG share a row.
+  const swingText = label(doc, 'SWN', 21.04, 55.71);
+  const swing = new PixelSlider(doc, 48, 95, 59, scaleOf('swing'), 1, 'Swing');
   swing.onChange = ([v], g) => set('swing', v, g);
-  const legato = new PixelButton(doc, { x: 20, y: 69, w: 63, h: 17 }, 'LEGATO', 'Legato');
-  legato.onClick = () => set('legato', get('legato') ? 0 : 1);
+  const rngText = label(doc, 'RNG', 103.04, 55.71);
+  const rng = new PixelSlider(doc, 130, 191, 59, scaleOf('rng'), 1, 'RNG: how far notes stray from the pattern');
+  rng.onChange = ([v], g) => set('rng', v, g);
+  const susText = label(doc, '', 21.04, 72.71);
   const sustain = new PixelSlider(doc, 102, 189, 77, scaleOf('sustainMin'), 2, 'Sustain min and max');
   sustain.onChange = ([a, b], g) => {
     set('sustainMin', a, g);
     set('sustainMax', b, g);
   };
-  const sustainText = label(doc, '', 21.04, 95.71);
-  const retrig = new PixelButton(doc, { x: 103, y: 90, w: 34, h: 17 }, 'RTRG', 'Retrig');
+  const legato = new PixelButton(doc, { x: 20, y: 90, w: 45, h: 17 }, 'LEGATO', 'Legato');
+  legato.onClick = () => set('legato', get('legato') ? 0 : 1);
+  const retrig = new PixelButton(doc, { x: 92, y: 90, w: 34, h: 17 }, 'RTRG', 'Retrig');
   retrig.onClick = () => set('retrig', get('retrig') ? 0 : 1);
-  const openChaos = new PixelButton(doc, { x: 146, y: 90, w: 43, h: 17 }, 'CHAOS', 'Chaos settings');
-  main.append(loopText, loop.el, lenText, len.el, swingText, swing.el, legato.el, sustain.el, sustainText, retrig.el, openChaos.el);
+  const openChaos = new PixelButton(doc, { x: 146, y: 90, w: 42, h: 17 }, 'CHAOS', 'Chaos settings');
+  main.append(loopText, loop.el, lenText, len.el, swingText, swing.el, rngText, rng.el, susText, sustain.el, legato.el, retrig.el, openChaos.el);
 
-  // ---- chaos page (design − 470,−39) ----
+  // ---- chaos page (design − 272,−32) ----
   const chaos = div(doc, 'ca-page');
   chaos.hidden = true;
   const picture = doc.createElement('img');
@@ -169,11 +181,12 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
   const divider = div(doc, 'ca-divider', { x: 125, y: 17, w: 1, h: 94 });
   chaos.append(picture, close.el, valueText, value.el, trigText, prev.el, trigValue, next.el, unitValue, unitText, unitLoop.el, unitBeat.el, divider);
   const groups: [string, string, number, number][] = [
-    ['chaosShuffle', 'SHUFFLE', 17, 21.08],
-    ['chaosLength', 'LENGTH', 36, 39.57],
-    ['chaosSwing', 'SWING', 54, 58.07],
-    ['chaosSustain', 'SUSTAIN', 73, 76.56],
-    ['chaosChaos', 'CHAOS', 92, 95.05],
+    ['chaosShuffle', 'SHUFFLE', 15, 19.08],
+    ['chaosLength', 'LENGTH', 31, 34.57],
+    ['chaosSwing', 'SWING', 47, 51.07],
+    ['chaosSustain', 'SUSTAIN', 63, 66.56],
+    ['chaosRng', 'RNG', 79, 82.05],
+    ['chaosChaos', 'CHAOS', 95, 98.05],
   ];
   const checks = groups.map(([id, text, boxY, textY]) => {
     const box = new PixelCheckbox(doc, 177, boxY, `Chaos changes ${text.toLowerCase()}`);
@@ -215,14 +228,14 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
     lenText.textContent = lengthText(get('noteLengthMin'), get('noteLengthMax'));
     len.set([get('noteLengthMin'), get('noteLengthMax')]);
     swing.set([get('swing')]);
-    // Legato on: LEGATO, sustain unused. Off: SUSTAIN, its range on.
+    rng.set([get('rng')]);
+    // Legato on: the sustain range is unused, so it dims.
     const isLegato = get('legato') !== 0;
     legato.setOn(isLegato);
-    legato.setText(isLegato ? 'LEGATO' : 'SUSTAIN');
     sustain.set([get('sustainMin'), get('sustainMax')]);
     sustain.setDisabled(isLegato);
-    sustainText.textContent = `(${rangeText(get('sustainMin'), get('sustainMax'))})`;
-    sustainText.classList.toggle('ca-dim', isLegato);
+    susText.textContent = sustainText(get('sustainMin'), get('sustainMax'));
+    susText.classList.toggle('ca-dim', isLegato);
     retrig.setOn(get('retrig') !== 0);
 
     value.set([get('chaosValue')]);
