@@ -90,13 +90,18 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
     const v = p.min + bridge.get(id) * (p.max - p.min);
     return p.kind === 'float' ? v : Math.round(v);
   };
+  // Hosts do not echo the skin's own changes back (onParam is for outside changes), so the skin redraws
+  // itself after every change it makes. The engine may move other params too (Chaos button): those arrive
+  // through onParam as 'internal'.
   const set = (id: string, v: number, gesture?: 'begin' | 'end') => {
     const p = byId.get(id)!;
     bridge.set(id, (v - p.min) / (p.max - p.min), gesture);
+    refresh();
   };
   const press = (id: string) => {
     bridge.set(id, 1, 'begin');
     bridge.set(id, 0, 'end');
+    refresh();
   };
   const scaleOf = (id: string) => {
     const p = byId.get(id)!;
@@ -204,7 +209,7 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
   root.append(main, chaos, hardware('shuffle', 11), hardware('chaos', 122));
 
   // ---- values → screen ----
-  const refresh = () => {
+  function refresh() {
     loopText.textContent = `LOOP (${pow2Text(get('loop'))})`;
     loop.set([get('loop')]);
     lenText.textContent = lengthText(get('noteLengthMin'), get('noteLengthMax'));
@@ -234,7 +239,7 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
     unitBeat.el.hidden = !isBeat;
     unitText.hidden = unitValue.hidden = !(isLoop || isBeat);
     for (const { id, box } of checks) box.set(get(id) !== 0);
-  };
+  }
   refresh();
   cleanups.push(bridge.onParam(() => refresh()));
 

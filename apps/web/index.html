@@ -43,7 +43,9 @@
       .layout { display: grid; grid-template-columns: 414px 1fr; gap: 16px; align-items: start; }
       @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
       /* The plugin is 207 x 169 (design size); shown at 2x here. */
-      #plugin { zoom: 2; width: 207px; min-height: 169px; }
+      /* transform, not CSS zoom: every browser then measures the plugin the same way for pointer input. */
+      .plugin-frame { width: 414px; height: 338px; }
+      #plugin { width: 207px; height: 169px; transform: scale(2); transform-origin: 0 0; }
       #plugin:empty::before { content: 'Press Start audio'; color: var(--muted); font-size: 7px; }
       .log {
         background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
@@ -88,7 +90,7 @@
         <button id="save" disabled title="getState, then setState with it">State round-trip</button>
       </div>
       <div class="layout">
-        <div id="plugin"></div>
+        <div class="plugin-frame"><div id="plugin"></div></div>
         <div class="log" id="log"></div>
       </div>
       <p class="hint">

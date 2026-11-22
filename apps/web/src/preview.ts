@@ -27,9 +27,10 @@ const bridge: SkinBridge = {
     } else {
       core.ca_set_param(engine, index, toPlain(p, n));
     }
-    // Every skin hears every change (both previews stay in step; chaos moves other params).
+    // As the plugin host: the skin is not told about its own change, only about params the engine moved
+    // (the Chaos button). So the two previews do not keep each other in step for direct edits.
     PARAMS.forEach((q, i) => {
-      if (plain(q.id) !== before[i] || i === index) for (const l of [...listeners]) l(q.id, bridge.get(q.id));
+      if (i !== index && plain(q.id) !== before[i]) for (const l of [...listeners]) l(q.id, bridge.get(q.id));
     });
   },
   onParam(cb) {
