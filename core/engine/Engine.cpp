@@ -334,10 +334,11 @@ bool Engine::applyNote(int frame, std::uint8_t status, std::uint8_t d1, std::uin
         const bool fromSilence = held_.empty();
         held_.noteOn(d1, d2);
         if (fromSilence) {
-            // A new chord: retrig counts from here, so does chaos; Note trigger rolls.
+            // A new chord: retrig counts from here (and chaos with it, since it follows the sequence's
+            // start); Note trigger rolls.
             retrigOrigin_ = beat;
             slotStart_ = kNoSlot;
-            chaosClock_.restart(beat);
+            if (intParam(kRetrig) != 0) chaosClock_.restart(beat);
             if (intParam(kChaosTrigger) == static_cast<int>(ChaosTrigger::Note)) rollChaos();
         }
     } else if (type == 0x80 || type == 0x90) {

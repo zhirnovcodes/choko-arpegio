@@ -430,6 +430,23 @@ void chaosBeatTrigger() {
     CHECK_EQ(countRolls(e, frameOf(4.25), static_cast<int>(frameOf(0.25)), chord(0, {60})), 4);
 }
 
+void chaosCountsFromTheSequenceStart() {
+    // Chords from silence every 4 beats, chaos every 4 beats. Without retrig the count follows the
+    // transport, so it rolls at beats 4 and 8. With retrig each chord restarts it, so it never rolls.
+    for (int retrig = 0; retrig < 2; ++retrig) {
+        Engine e(kRate, 20);
+        e.setParam(kRetrig, retrig);
+        e.setParam(kChaosTrigger, static_cast<int>(ChaosTrigger::Beat));
+        e.setParam(kChaosBeat, 2);
+        std::vector<In> in;
+        for (int bar = 0; bar < 3; ++bar) {
+            in.push_back({frameOf(bar * 4.0), 0x90, 60, 100});
+            in.push_back({frameOf(bar * 4.0 + 3.9), 0x80, 60, 0});
+        }
+        CHECK_EQ(countRolls(e, frameOf(9), static_cast<int>(frameOf(0.25)), in), retrig ? 0 : 2);
+    }
+}
+
 void chaosLoopTrigger() {
     // Loop 2 beats, chaos loop 2 loops → every 4 beats: beats 4 and 8 in 9 beats.
     Engine e(kRate, 18);
@@ -472,6 +489,7 @@ void engineTests() {
     chaosButtonRollsWithinRanges();
     chaosOffGroupsStayPut();
     chaosBeatTrigger();
+    chaosCountsFromTheSequenceStart();
     chaosLoopTrigger();
     chaosNoteTrigger();
 }

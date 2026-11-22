@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "paths": { "ivandaw-core": ["./node_modules/ivandaw-core"] }
+  },
+  "include": ["src", "../../hosts/web", "vite.config.ts", "vite.daw.config.ts", "vite.shared.ts"]
+}

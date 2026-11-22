@@ -127,7 +127,7 @@ Same model as Beatality. Logic lives in the **engine**; when chaos changes a par
   - `beat` — rolls every `chaosBeat` beats.
   - `loop` — rolls every `chaosLoop` loops (`chaosLoop × loop` beats; can be a fraction of a loop).
   - The **Chaos** button rolls in every mode.
-  - Counting starts from the note start / transport start; the start itself is not a roll. Changing the unit size restarts the count (Beatality `Chaos::tick` / `restart`).
+  - Counting follows the sequence start: the transport start (play or seek), or with **Retrig** on also each new chord from silence. The start itself is not a roll. Changing the unit size restarts the count (Beatality `Chaos::tick` / `restart`).
 - **Groups** (toggle on = chaos may change it):
   | Toggle | Changes | Then regenerates |
   |---|---|---|

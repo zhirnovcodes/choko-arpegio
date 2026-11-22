@@ -1,0 +1,23 @@
+{
+  "name": "@choko-arpegio/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:web": "tsc --noEmit && vitest run && vite build",
+    "build:daw": "tsc --noEmit && vitest run && vite build --config vite.daw.config.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "ivandaw-core": "github:zhirnovcodes/ivan-daw-core#v0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.1.0"
+  }
+}

@@ -9,17 +9,25 @@ How it works: [docs/spec.md](docs/spec.md).
 | Step | Scope | Status |
 | --- | --- | --- |
 | 1 | Repo, C++ core (sequences, time table, chaos, engine), core tests | done |
-| 2 | Default UI, standalone web build with demo chords and a sine synth | |
+| 2 | Default UI, standalone web build with demo chords and a sine synth | done |
 | 3 | Final design | |
 | 4 | VST3 / AU MIDI FX / Standalone (JUCE), Windows + Mac | |
 | 5 | CI/CD, IvanDAW integration | |
 
 ## Build and test
 
-Needs emscripten, CMake ≥ 3.25, Ninja, Node.
+Needs emscripten, CMake ≥ 3.25, Ninja, Node 24, pnpm 10.
 
 ```
 emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-wasm
 node build-wasm/ca_tests.js
+
+pnpm install
+pnpm --filter @choko-arpegio/web dev          # standalone page at http://localhost:5191
+pnpm --filter @choko-arpegio/web build:web    # static site → apps/web/dist/
+pnpm --filter @choko-arpegio/web build:daw    # IvanDAW plugin → apps/web/dist-daw/
 ```
+
+The standalone page plays random 3–4 note chords (every beat … 2 bars, with or without a gap) into the
+arpeggiator, which drives IvanDAW's base sine synth. Keys A…K hold notes yourself.

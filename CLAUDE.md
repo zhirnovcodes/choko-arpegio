@@ -27,7 +27,8 @@ Sibling repos: `C:\Work\BananaChords` (same layout; its drift = our swing), `C:\
 | `core/engine/` | `Engine`: params, transport, input chord, chaos, note output | core/domain |
 | `tests/` | C++ test executable `ca_tests` | core |
 | `params.json` | the only parameter list | both hosts, CMake (generates `ParamsJson.h`) |
-| `hosts/web/`, `apps/web/` | step 2: C ABI, IvanDAW plugin, dev page | – |
+| `hosts/web/` | C ABI (`boundary/api.cpp`), wasm loader, lookahead driver, `PluginFactory`, `NoteTimeline` | core via C ABI, ivandaw-core |
+| `apps/web/` | standalone page (`index.html`, `src/dev.ts`, random chords), the skin in `src/ui/`, test synth in `src/synth/` (copy of ivan-daw `base-sine-synth`) | – |
 
 ## Commands
 
@@ -36,6 +37,11 @@ Sibling repos: `C:\Work\BananaChords` (same layout; its drift = our swing), `C:\
 emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-wasm
 node build-wasm/ca_tests.js
+# standalone web version (random chords → arp → sine synth)
+pnpm install
+pnpm --filter @choko-arpegio/web dev          # http://localhost:5191
+pnpm --filter @choko-arpegio/web build:web    # → apps/web/dist/ (static site)
+pnpm --filter @choko-arpegio/web build:daw    # → apps/web/dist-daw/ (IvanDAW plugin)
 # native core tests (CI, macOS / Linux)
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --target ca_tests && ./build/ca_tests
 ```
@@ -55,4 +61,6 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -
 ## Workflow
 
 - Commit and push after every implementation step (see docs/spec.md §7).
-- Before pushing: `node build-wasm/ca_tests.js` passes.
+- Before pushing: `node build-wasm/ca_tests.js`, `build:web` and `build:daw` pass.
+- Web: musical timing uses `createTicker` / `LOOKAHEAD` from ivandaw-core, never `setTimeout` / `setInterval`.
+  The driver renders one LOOKAHEAD ahead, so input MIDI must be booked further ahead than that to land on its frame.
