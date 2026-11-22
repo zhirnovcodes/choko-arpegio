@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+third_party/
+
+# Build output (all CMake build trees: build/, build-wasm/, ...)
+build*/
+dist/
+dist-daw/
+out/
+.emscripten
+
+# IDE / OS
+.vs/
+.vscode/
+*.user
+*.suo
+.DS_Store
+Thumbs.db

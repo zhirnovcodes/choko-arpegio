@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "comment": "Chaos ranges per param: [low, high] at chaos 0 and at chaos 1. Pow2 params are given in beats (loops for chaosLoop); the engine converts them to exponents.",
+  "ranges": {
+    "noteLengthMin": { "chaos0": [0.25, 8], "chaos1": [0.0625, 1] },
+    "noteLengthMax": { "chaos0": [0.25, 8], "chaos1": [0.0625, 1] },
+    "sustainMin":    { "chaos0": [0.25, 8], "chaos1": [0.03125, 16] },
+    "sustainMax":    { "chaos0": [0.25, 8], "chaos1": [0.03125, 16] },
+    "swing":         { "chaos0": [0, 0.2],  "chaos1": [0, 1] },
+    "chaosLoop":     { "chaos0": [1, 8],    "chaos1": [0.125, 1] },
+    "chaosBeat":     { "chaos0": [2, 32],   "chaos1": [0.125, 2] }
+  }
+}
