@@ -6,7 +6,7 @@ export const VERSION = '0.0.1'; // same as VERSION in CMakeLists.txt
 
 export const manifest: PluginManifest = {
   id: ID,
-  name: 'Choko Arpegio',
+  name: 'Choco Arpegio',
   vendor: 'zhirnovcodes',
   version: VERSION,
   apiVersion: 2,

@@ -1,4 +1,4 @@
-// The Choko Arpegio skin (default style): plain DOM, used by every host through SkinBridge.
+// The Choco Arpegio skin (default style): plain DOM, used by every host through SkinBridge.
 // It never knows which host runs it. All classes start with "ca-".
 
 import css from './skin.css?inline';
@@ -87,7 +87,7 @@ export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => voi
   // Header: title and the two buttons.
   const header = el(doc, 'div', 'ca-header');
   const title = el(doc, 'div', 'ca-title');
-  title.append(el(doc, 'span', 'ca-logo', 'CHOKO'), el(doc, 'span', 'ca-logo2', 'ARPEGIO'));
+  title.append(el(doc, 'span', 'ca-logo', 'CHOCO'), el(doc, 'span', 'ca-logo2', 'ARPEGIO'));
   const buttons = el(doc, 'div', 'ca-buttons');
   for (const p of bridge.params.filter((q) => q.kind === 'trigger')) {
     const b = el(doc, 'button', 'ca-button' + (p.id === 'chaos' ? ' ca-chaos' : ''), p.label);
