@@ -1,0 +1,31 @@
+name: Core tests
+
+# The C++ core tests, native. Until the JUCE build (step 5) brings mac.yml, which runs them too.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target ca_tests
+
+      - name: Run
+        run: |
+          out=$(./build/ca_tests 2>&1) && status=0 || status=$?
+          # One line per failing check, with how many times it failed.
+          printf '%s\n' "$out" | grep '^FAIL' | sort | uniq -c || true
+          printf '%s\n' "$out" | grep -v '^FAIL'
+          exit $status

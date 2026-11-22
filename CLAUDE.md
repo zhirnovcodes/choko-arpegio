@@ -62,5 +62,9 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -
 
 - Commit and push after every implementation step (see docs/spec.md §7).
 - Before pushing: `node build-wasm/ca_tests.js`, `build:web` and `build:daw` pass.
+- CI: `daw-plugin.yml` (PR artifact `choko-arpegio-daw`; on `master` release `daw-build-<n>`), `core-tests.yml`.
+- The release contract (tag `daw-build-<n>`, asset `choko-arpegio-daw.zip`, `index.js` + `manifest.json` + `choko-arpegio.wasm`
+  at the zip root) never changes without a matching ivan-daw change. ivan-daw is changed only in its own session
+  (pin in `plugins/choko-arpegio/package.json`).
 - Web: musical timing uses `createTicker` / `LOOKAHEAD` from ivandaw-core, never `setTimeout` / `setInterval`.
   The driver renders one LOOKAHEAD ahead, so input MIDI must be booked further ahead than that to land on its frame.

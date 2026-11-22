@@ -241,8 +241,11 @@ Commit and push after every step.
 1. **Repo + base classes** — clone layout from BananaChords: `core/domain` (Rng, Sequences, TimeTable, Chaos, ChaosRanges), `core/engine` (Engine), `params.json`, CMake, pnpm workspace, unit tests for sequence generation and time-table lookup.
 2. **Default-style UI + standalone web build** — WASM engine + simple UI exposing all params. Demo host: a fake DAW playhead that plays random 3–4-note chords; arpeggiator output drives a simple sine synth (copy the sine generator from IvanDAW).
 3. **Designed UI** — apply the design docs (provided later). Rebuild web version.
-4. **VST** (Windows) and **Mac** builds — per `plugin-dev/04-vst-host.md`.
-5. **CI/CD** — build on every push; integrate into IvanDAW — per `plugin-dev/05-ci-cd.md` and `06-ivandaw-integration.md`.
+4. **CI/CD + IvanDAW integration** — per `plugin-dev/05-ci-cd.md` and `06-ivandaw-integration.md`:
+   `daw-plugin.yml` (PR artifact `choko-arpegio-daw`; on `master` release `daw-build-<n>` with `choko-arpegio-daw.zip`)
+   and `core-tests.yml` (native core tests, until step 5 brings `mac.yml`). ivan-daw then pins the release in
+   `plugins/choko-arpegio/package.json` and the arpeggiator is a node in the DAW.
+5. **VST** (Windows) and **Mac** builds — JUCE per `plugin-dev/04-vst-host.md`; CI adds `mac.yml` (and the Windows job).
 
 ---
 
