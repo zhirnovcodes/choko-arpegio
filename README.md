@@ -10,7 +10,7 @@ How it works: [docs/spec.md](docs/spec.md).
 | --- | --- | --- |
 | 1 | Repo, C++ core (sequences, time table, chaos, engine), core tests | done |
 | 2 | Default UI, standalone web build with demo chords and a sine synth | done |
-| 3 | Final design | |
+| 3 | Final design (device skin: plastic frame, LCD screen with main + chaos pages, silicone buttons) | done |
 | 4 | VST3 / AU MIDI FX / Standalone (JUCE), Windows + Mac | |
 | 5 | CI/CD, IvanDAW integration | |
 

@@ -15,6 +15,6 @@ export const manifest: PluginManifest = {
     { id: 'in', label: 'Notes', kind: 'events', direction: 'in', accepts: ['midi', 'automation', 'tempo', 'transport'] },
     { id: 'out', label: 'Notes', kind: 'events', direction: 'out', accepts: ['midi'] },
   ],
-  ui: { width: 600, height: 560, resizable: false },
+  ui: { width: 207, height: 169, resizable: false },
   features: ['state'],
 };

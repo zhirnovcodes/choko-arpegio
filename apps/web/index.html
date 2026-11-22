@@ -40,13 +40,14 @@
       select { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; }
       input[type='range'], input[type='checkbox'] { accent-color: var(--accent); }
       .stats { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
-      .layout { display: grid; grid-template-columns: 600px 1fr; gap: 16px; align-items: start; }
+      .layout { display: grid; grid-template-columns: 414px 1fr; gap: 16px; align-items: start; }
       @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
-      #plugin { min-height: 560px; overflow-x: auto; }
-      #plugin:empty::before { content: 'Press Start audio to load the plugin.'; color: var(--muted); }
+      /* The plugin is 207 x 169 (design size); shown at 2x here. */
+      #plugin { zoom: 2; width: 207px; min-height: 169px; }
+      #plugin:empty::before { content: 'Press Start audio'; color: var(--muted); font-size: 7px; }
       .log {
         background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-        padding: 8px 10px; height: 560px; overflow: auto;
+        padding: 8px 10px; height: 338px; overflow: auto;
         font: 12px/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--muted);
       }
       .log .on { color: var(--accent); }

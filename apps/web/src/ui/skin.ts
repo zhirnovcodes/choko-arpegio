@@ -1,8 +1,12 @@
-// The Choco Arpegio skin (default style): plain DOM, used by every host through SkinBridge.
-// It never knows which host runs it. All classes start with "ca-".
+// The Choco Arpegio skin: the device (device/device.svg) with its screen, plain DOM, used by every host through
+// SkinBridge. It never knows which host runs it. All classes start with "ca-".
+// Layout = the design (Frame 1.svg): a main page and a chaos page on the one screen, SHUFFLE and CHAOS below.
 
+import { DEVICE, deviceMarkup } from './device/device';
+import chaosPictureUrl from './assets/chaos-picture.png';
 import css from './skin.css?inline';
-import { formatValue, noteName, pow2Text, type SkinParam } from './format';
+import { pow2Text, type SkinParam } from './format';
+import { centredLabel, div, label, PixelButton, PixelCheckbox, PixelSlider, place } from './widgets';
 
 export { noteName } from './format';
 
@@ -39,7 +43,7 @@ function holdStyles(doc: Document): () => void {
   let entry = styles.get(doc);
   if (!entry) {
     const element = doc.createElement('style');
-    element.dataset.chokoArpegio = '';
+    element.dataset.chocoArpegio = '';
     element.textContent = css;
     doc.head.append(element);
     entry = { element, users: 0 };
@@ -56,241 +60,190 @@ function holdStyles(doc: Document): () => void {
   };
 }
 
-const plainOf = (p: SkinParam, n: number) => {
-  const v = p.min + Math.min(1, Math.max(0, n)) * (p.max - p.min);
-  return p.kind === 'float' ? v : Math.round(v);
-};
-const normOf = (p: SkinParam, v: number) => (v - p.min) / (p.max - p.min);
-
-function el<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, cls?: string, text?: string) {
-  const e = doc.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
-
-// Chaos Loop shows only for the Loop trigger, Chaos Beat only for Beat. Sustain is off with Legato.
+const TRIGGERS = ['NONE', 'NOTE', 'BEAT', 'LOOP'];
 const TRIGGER_BEAT = 2;
 const TRIGGER_LOOP = 3;
 
-/** Renders the skin into `container`. Returns the unmount function. */
+/** 2^a-2^b as text, e.g. "1/16-1/2". */
+const rangeText = (a: number, b: number) => `${pow2Text(a)}-${pow2Text(b)}`;
+/** The short form for tight rows: "1/16" → "/16". */
+const shortPow2 = (n: number) => pow2Text(n).replace(/^1\//, '/');
+
+/** LEN row: "LEN. (a-b)" as in the design; shorter forms when it would run into the slider (11 characters). */
+export function lengthText(a: number, b: number): string {
+  for (const t of [`LEN. (${rangeText(a, b)})`, `LEN. ${rangeText(a, b)}`, `LEN ${rangeText(a, b)}`, `LEN ${shortPow2(a)}-${shortPow2(b)}`]) {
+    if (t.length <= 11) return t;
+  }
+  return `LEN ${shortPow2(a)}-${shortPow2(b)}`;
+}
+
+/** Renders the skin into `container` at design size (DEVICE, 207 x 169). Returns the unmount function. */
 export function mountSkin(container: HTMLElement, bridge: SkinBridge): () => void {
   const doc = container.ownerDocument;
-  const win = doc.defaultView ?? window;
   const releaseStyles = holdStyles(doc);
   const cleanups: (() => void)[] = [];
   const byId = new Map(bridge.params.map((p) => [p.id, p]));
-  const plain = (id: string) => plainOf(byId.get(id)!, bridge.get(id));
 
-  const root = el(doc, 'div', 'ca-skin');
+  // Plain values in and out; the bridge speaks normalized.
+  const get = (id: string) => {
+    const p = byId.get(id)!;
+    const v = p.min + bridge.get(id) * (p.max - p.min);
+    return p.kind === 'float' ? v : Math.round(v);
+  };
+  const set = (id: string, v: number, gesture?: 'begin' | 'end') => {
+    const p = byId.get(id)!;
+    bridge.set(id, (v - p.min) / (p.max - p.min), gesture);
+  };
+  const press = (id: string) => {
+    bridge.set(id, 1, 'begin');
+    bridge.set(id, 0, 'end');
+  };
+  const scaleOf = (id: string) => {
+    const p = byId.get(id)!;
+    return { min: p.min, max: p.max, step: p.kind === 'float' ? 0 : 1 };
+  };
 
-  // Header: title and the two buttons.
-  const header = el(doc, 'div', 'ca-header');
-  const title = el(doc, 'div', 'ca-title');
-  title.append(el(doc, 'span', 'ca-logo', 'CHOCO'), el(doc, 'span', 'ca-logo2', 'ARPEGIO'));
-  const buttons = el(doc, 'div', 'ca-buttons');
-  for (const p of bridge.params.filter((q) => q.kind === 'trigger')) {
-    const b = el(doc, 'button', 'ca-button' + (p.id === 'chaos' ? ' ca-chaos' : ''), p.label);
+  const root = div(doc, 'ca-root', { x: 0, y: 0, w: DEVICE.width, h: DEVICE.height });
+  root.style.position = 'relative';
+  const device = div(doc, 'ca-device');
+  device.innerHTML = deviceMarkup();
+  root.append(device);
+
+  // ---- main page (design − 262,−39) ----
+  const main = div(doc, 'ca-page');
+  const loopText = label(doc, '', 21.04, 19.71);
+  const loop = new PixelSlider(doc, 102, 188, 23, scaleOf('loop'), 1, 'Loop length');
+  loop.onChange = ([v], g) => set('loop', v, g);
+  const lenText = label(doc, '', 21.04, 37.71);
+  const len = new PixelSlider(doc, 102, 188, 41, scaleOf('noteLengthMin'), 2, 'Note length min and max');
+  len.onChange = ([a, b], g) => {
+    set('noteLengthMin', a, g);
+    set('noteLengthMax', b, g);
+  };
+  const swingText = label(doc, 'SWING', 21.04, 55.71);
+  const swing = new PixelSlider(doc, 102, 188, 59, scaleOf('swing'), 1, 'Swing');
+  swing.onChange = ([v], g) => set('swing', v, g);
+  const legato = new PixelButton(doc, { x: 20, y: 69, w: 63, h: 17 }, 'LEGATO', 'Legato');
+  legato.onClick = () => set('legato', get('legato') ? 0 : 1);
+  const sustain = new PixelSlider(doc, 102, 189, 77, scaleOf('sustainMin'), 2, 'Sustain min and max');
+  sustain.onChange = ([a, b], g) => {
+    set('sustainMin', a, g);
+    set('sustainMax', b, g);
+  };
+  const sustainText = label(doc, '', 21.04, 95.71);
+  const retrig = new PixelButton(doc, { x: 103, y: 90, w: 34, h: 17 }, 'RTRG', 'Retrig');
+  retrig.onClick = () => set('retrig', get('retrig') ? 0 : 1);
+  const openChaos = new PixelButton(doc, { x: 146, y: 90, w: 43, h: 17 }, 'CHAOS', 'Chaos settings');
+  main.append(loopText, loop.el, lenText, len.el, swingText, swing.el, legato.el, sustain.el, sustainText, retrig.el, openChaos.el);
+
+  // ---- chaos page (design − 470,−39) ----
+  const chaos = div(doc, 'ca-page');
+  chaos.hidden = true;
+  const picture = doc.createElement('img');
+  picture.className = 'ca-picture';
+  picture.src = chaosPictureUrl;
+  picture.alt = 'CHAOS';
+  place(picture, { x: 20, y: 16.87, w: 57, h: 20.27 });
+  const close = new PixelButton(doc, { x: 104, y: 19, w: 13, h: 13 }, 'X', 'Back to the main page');
+  const valueText = label(doc, 'VALUE', 21.04, 47.71);
+  const value = new PixelSlider(doc, 61, 118, 51, scaleOf('chaosValue'), 1, 'Chaos value');
+  value.onChange = ([v], g) => set('chaosValue', v, g);
+  const trigText = label(doc, 'TRIG.', 21.04, 70.71);
+  const prev = new PixelButton(doc, { x: 56, y: 68, w: 11, h: 13 }, '<', 'Previous chaos trigger');
+  const next = new PixelButton(doc, { x: 106, y: 68, w: 11, h: 13 }, '>', 'Next chaos trigger');
+  const trigValue = centredLabel(doc, '', 86.5, 70.71);
+  const stepTrigger = (dir: number) => set('chaosTrigger', (((get('chaosTrigger') + dir) % 4) + 4) % 4);
+  prev.onClick = () => stepTrigger(-1);
+  next.onClick = () => stepTrigger(1);
+  const unitValue = centredLabel(doc, '', 90.5, 86.92, true);
+  const unitText = label(doc, '', 21.04, 95.71);
+  const unitLoop = new PixelSlider(doc, 62, 118, 100, scaleOf('chaosLoop'), 1, 'Chaos every n loops');
+  unitLoop.onChange = ([v], g) => set('chaosLoop', v, g);
+  const unitBeat = new PixelSlider(doc, 62, 118, 100, scaleOf('chaosBeat'), 1, 'Chaos every n beats');
+  unitBeat.onChange = ([v], g) => set('chaosBeat', v, g);
+  const divider = div(doc, 'ca-divider', { x: 125, y: 17, w: 1, h: 94 });
+  chaos.append(picture, close.el, valueText, value.el, trigText, prev.el, trigValue, next.el, unitValue, unitText, unitLoop.el, unitBeat.el, divider);
+  const groups: [string, string, number, number][] = [
+    ['chaosShuffle', 'SHUFFLE', 17, 21.08],
+    ['chaosLength', 'LENGTH', 36, 39.57],
+    ['chaosSwing', 'SWING', 54, 58.07],
+    ['chaosSustain', 'SUSTAIN', 73, 76.56],
+    ['chaosChaos', 'CHAOS', 92, 95.05],
+  ];
+  const checks = groups.map(([id, text, boxY, textY]) => {
+    const box = new PixelCheckbox(doc, 177, boxY, `Chaos changes ${text.toLowerCase()}`);
+    box.onToggle = () => set(id, get(id) ? 0 : 1);
+    chaos.append(label(doc, text, 132.87, textY, true), box.el);
+    return { id, box };
+  });
+
+  const showPage = (page: 'main' | 'chaos') => {
+    main.hidden = page !== 'main';
+    chaos.hidden = page !== 'chaos';
+  };
+  openChaos.onClick = () => showPage('chaos');
+  close.onClick = () => showPage('main');
+
+  // ---- the device's silicone buttons: SHUFFLE and CHAOS ----
+  const hardware = (id: 'shuffle' | 'chaos', x: number) => {
+    const b = doc.createElement('button');
     b.type = 'button';
-    b.dataset.param = p.id;
-    b.title = p.id === 'shuffle' ? 'New sequences' : 'Roll chaos now';
-    b.addEventListener('click', () => {
-      bridge.set(p.id, 1, 'begin');
-      bridge.set(p.id, 0, 'end');
-    });
-    buttons.append(b);
-  }
-  header.append(title, buttons);
-
-  // Timeline: one block per slot; inside it the sounding part as a bar at the height of its note pick.
-  const timeline = el(doc, 'div', 'ca-timeline');
-  const blocks = el(doc, 'div', 'ca-blocks');
-  const head = el(doc, 'div', 'ca-playhead');
-  const ruler = el(doc, 'div', 'ca-ruler');
-  timeline.append(blocks, head);
-  let current: SequenceView = bridge.view();
-  let blockEls: HTMLElement[] = [];
-
-  const renderView = () => {
-    current = bridge.view();
-    const loop = current.loop;
-    blocks.replaceChildren();
-    ruler.replaceChildren();
-    blockEls = current.slots.map((s, i) => {
-      const b = el(doc, 'div', 'ca-block' + (i % 2 ? ' ca-alt' : ''));
-      b.style.left = `${(s.start / loop) * 100}%`;
-      b.style.width = `${((s.end - s.start) / loop) * 100}%`;
-      const bar = el(doc, 'div', 'ca-bar');
-      bar.style.width = `${((s.soundEnd - s.start) / (s.end - s.start)) * 100}%`;
-      bar.style.bottom = `${8 + s.value * 76}%`;
-      b.append(bar);
-      b.title = `Note ${i + 1}: from beat ${+s.start.toFixed(3)}, sounds ${+(s.soundEnd - s.start).toFixed(3)} of ${+(s.end - s.start).toFixed(3)} beats, pick ${s.value.toFixed(2)}`;
-      blocks.append(b);
-      return b;
-    });
-    // Ruler: a tick per beat (per bar from 16 beats, per quarter of the loop below 1 beat), labelled by beat.
-    const step = loop >= 16 ? 4 : loop >= 1 ? 1 : loop / 4;
-    for (let beat = 0; beat < loop - 1e-9; beat += step) {
-      const tick = el(doc, 'div', 'ca-tick', step >= 1 ? String(beat + 1) : '');
-      tick.style.left = `${(beat / loop) * 100}%`;
-      ruler.append(tick);
-    }
-    if (loop < 1) ruler.append(el(doc, 'div', 'ca-ruler-note', `loop ${pow2Text(Math.log2(loop))} beat`));
+    b.className = 'ca-hw';
+    b.setAttribute('aria-label', id === 'shuffle' ? 'Shuffle: new sequences' : 'Chaos: roll now');
+    place(b, { x, y: 140, w: 74, h: 23 });
+    const art = device.querySelector(`[id$="button-${id}"]`);
+    const down = () => art?.classList.add('ca-down');
+    const up = () => art?.classList.remove('ca-down');
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointerleave', up);
+    b.addEventListener('click', () => press(id));
+    return b;
   };
-  renderView();
-  cleanups.push(bridge.onView(renderView));
 
-  // Notes: what is held and what plays.
-  const notesRow = el(doc, 'div', 'ca-notes');
-  const heldEl = el(doc, 'span', 'ca-held');
-  const playedEl = el(doc, 'span', 'ca-played');
-  notesRow.append(el(doc, 'span', 'ca-notes-label', 'Chord'), heldEl, el(doc, 'span', 'ca-notes-label', 'Plays'), playedEl);
-  let lastHeld = '';
-  let lastPlayed = '';
+  root.append(main, chaos, hardware('shuffle', 11), hardware('chaos', 122));
 
-  let frame = 0;
-  let lastActive = -1;
-  const animate = () => {
-    const beat = bridge.playhead();
-    let active = -1;
-    const loop = current.loop;
-    if (beat === null || loop <= 0) {
-      head.style.display = 'none';
-    } else {
-      const pos = ((((beat - current.origin) % loop) + loop) % loop);
-      head.style.display = '';
-      head.style.left = `${(pos / loop) * 100}%`;
-      active = current.slots.findIndex((s) => pos >= s.start && pos < s.end);
-    }
-    if (active !== lastActive) {
-      blockEls[lastActive]?.classList.remove('ca-active');
-      blockEls[active]?.classList.add('ca-active');
-      lastActive = active;
-    }
-    const held = bridge.held();
-    const played = bridge.played();
-    const heldText = held.length ? held.map(noteName).join(' ') : '—';
-    const playedText = played.length ? played.map(noteName).join(' ') : '—';
-    if (heldText !== lastHeld) heldEl.textContent = lastHeld = heldText;
-    if (playedText !== lastPlayed) playedEl.textContent = lastPlayed = playedText;
-    frame = win.requestAnimationFrame(animate);
+  // ---- values → screen ----
+  const refresh = () => {
+    loopText.textContent = `LOOP (${pow2Text(get('loop'))})`;
+    loop.set([get('loop')]);
+    lenText.textContent = lengthText(get('noteLengthMin'), get('noteLengthMax'));
+    len.set([get('noteLengthMin'), get('noteLengthMax')]);
+    swing.set([get('swing')]);
+    // Legato on: LEGATO, sustain unused. Off: SUSTAIN, its range on.
+    const isLegato = get('legato') !== 0;
+    legato.setOn(isLegato);
+    legato.setText(isLegato ? 'LEGATO' : 'SUSTAIN');
+    sustain.set([get('sustainMin'), get('sustainMax')]);
+    sustain.setDisabled(isLegato);
+    sustainText.textContent = `(${rangeText(get('sustainMin'), get('sustainMax'))})`;
+    sustainText.classList.toggle('ca-dim', isLegato);
+    retrig.setOn(get('retrig') !== 0);
+
+    value.set([get('chaosValue')]);
+    const trigger = get('chaosTrigger');
+    trigValue.textContent = TRIGGERS[trigger] ?? '';
+    // The unit row shows for the Beat and Loop triggers only.
+    const isLoop = trigger === TRIGGER_LOOP;
+    const isBeat = trigger === TRIGGER_BEAT;
+    unitText.textContent = isLoop ? 'LOOP' : 'BEAT';
+    unitValue.textContent = pow2Text(get(isLoop ? 'chaosLoop' : 'chaosBeat'));
+    unitLoop.set([get('chaosLoop')]);
+    unitBeat.set([get('chaosBeat')]);
+    unitLoop.el.hidden = !isLoop;
+    unitBeat.el.hidden = !isBeat;
+    unitText.hidden = unitValue.hidden = !(isLoop || isBeat);
+    for (const { id, box } of checks) box.set(get(id) !== 0);
   };
-  frame = win.requestAnimationFrame(animate);
-  cleanups.push(() => win.cancelAnimationFrame(frame));
+  refresh();
+  cleanups.push(bridge.onParam(() => refresh()));
 
-  // Controls, by group.
-  const groups = el(doc, 'div', 'ca-groups');
-  const updaters = new Map<string, () => void>();
-  const rows = new Map<string, HTMLElement>();
-  const groupEls = new Map<string, HTMLElement>();
-  for (const p of bridge.params) {
-    if (p.kind === 'trigger') continue;
-    const group = p.group ?? 'Main';
-    let g = groupEls.get(group);
-    if (!g) {
-      g = el(doc, 'div', 'ca-group');
-      g.dataset.group = group;
-      g.append(el(doc, 'div', 'ca-group-title', group));
-      groupEls.set(group, g);
-      groups.append(g);
-    }
-    const row = el(doc, 'label', 'ca-row');
-    row.dataset.param = p.id;
-    const label = el(doc, 'span', 'ca-label', p.label);
-    const value = el(doc, 'span', 'ca-value');
-    let input: HTMLInputElement | HTMLSelectElement;
-    if (p.kind === 'choice' && p.choices) {
-      const select = el(doc, 'select', 'ca-select');
-      p.choices.forEach((c, i) => {
-        const o = el(doc, 'option', undefined, c);
-        o.value = String(p.min + i);
-        select.append(o);
-      });
-      select.addEventListener('change', () => {
-        bridge.set(p.id, normOf(p, Number(select.value)));
-        refreshVisibility();
-      });
-      input = select;
-      updaters.set(p.id, () => {
-        select.value = String(plainOf(p, bridge.get(p.id)));
-      });
-    } else if (p.kind === 'boolean') {
-      const box = el(doc, 'input', 'ca-toggle');
-      box.type = 'checkbox';
-      box.addEventListener('change', () => {
-        bridge.set(p.id, box.checked ? 1 : 0);
-        refreshVisibility();
-      });
-      input = box;
-      updaters.set(p.id, () => {
-        box.checked = bridge.get(p.id) >= 0.5;
-      });
-    } else {
-      const range = el(doc, 'input', 'ca-range');
-      range.type = 'range';
-      range.min = String(p.min);
-      range.max = String(p.max);
-      range.step = p.kind === 'float' ? '0.01' : '1';
-      let dragging = false;
-      range.addEventListener('pointerdown', () => {
-        dragging = true;
-        bridge.set(p.id, normOf(p, Number(range.value)), 'begin');
-      });
-      range.addEventListener('input', () => {
-        bridge.set(p.id, normOf(p, Number(range.value)));
-        value.textContent = formatValue(p, Number(range.value));
-      });
-      range.addEventListener('change', () => {
-        bridge.set(p.id, normOf(p, Number(range.value)), dragging ? 'end' : undefined);
-        dragging = false;
-      });
-      // Arrow keys move the slider; keep them from the DAW.
-      range.addEventListener('keydown', (e) => {
-        if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End' || e.key.startsWith('Page')) e.stopPropagation();
-      });
-      input = range;
-      updaters.set(p.id, () => {
-        const v = plainOf(p, bridge.get(p.id));
-        range.value = String(v);
-        value.textContent = formatValue(p, v);
-      });
-    }
-    input.dataset.param = p.id;
-    row.append(label, input);
-    if (p.kind !== 'choice' && p.kind !== 'boolean') row.append(value);
-    if (p.kind === 'boolean') row.classList.add('ca-row-toggle');
-    rows.set(p.id, row);
-    g.append(row);
-  }
+  // Keys the skin uses stay out of the DAW.
+  root.addEventListener('keydown', (e) => {
+    if (e.key.startsWith('Arrow') || e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+  });
 
-  const setDisabled = (id: string, off: boolean) => {
-    const row = rows.get(id);
-    if (!row) return;
-    row.classList.toggle('ca-disabled', off);
-    const input = row.querySelector('input, select') as HTMLInputElement | null;
-    if (input) input.disabled = off;
-  };
-  const setHidden = (id: string, hidden: boolean) => rows.get(id)?.classList.toggle('ca-hidden', hidden);
-  function refreshVisibility() {
-    const legato = plain('legato') >= 0.5;
-    setDisabled('sustainMin', legato);
-    setDisabled('sustainMax', legato);
-    const trigger = plain('chaosTrigger');
-    setHidden('chaosLoop', trigger !== TRIGGER_LOOP);
-    setHidden('chaosBeat', trigger !== TRIGGER_BEAT);
-  }
-
-  const refresh = (id: string) => {
-    updaters.get(id)?.();
-    refreshVisibility();
-  };
-  for (const id of updaters.keys()) updaters.get(id)?.();
-  refreshVisibility();
-  cleanups.push(bridge.onParam((id) => refresh(id)));
-
-  root.append(header, timeline, ruler, notesRow, groups);
   container.append(root);
-
   return () => {
     for (const c of cleanups) c();
     root.remove();
