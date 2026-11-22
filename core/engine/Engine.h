@@ -38,7 +38,7 @@ enum Param : int {
 
 // The random sequences. Each has its own seed, so a saved state replays exactly.
 // The time table is built from the others and has no seed.
-// kSeedNotes seeds the pattern sequence (spec �3.5).
+// kSeedNotes seeds the pattern sequence (spec §3.5).
 enum SeqSeed : int { kSeedTimes = 0, kSeedSwing, kSeedSustain, kSeedNotes, kSeedCount };
 
 // A chord change this soon after a slot starts still re-picks the slot's note (spec §4.1): 1/32 beat.
@@ -109,7 +109,7 @@ public:
     double slotStart(int slot);      // beats, after swing
     double slotEnd(int slot);
     double soundEnd(int slot);       // the note sounds on [slotStart, soundEnd)
-    // [0, 1]: the note the slot plays for the held chord (4 notes when none is held), RNG offset included.
+    // [0, 1): the note the slot plays for the held chord (4 notes when none is held), RNG offset included.
     double noteValue(int slot);
     int currentPitch() const { return pitch_; }
     // Goes up every time the sequences or the time table are rebuilt (params, Shuffle, chaos, seeds).

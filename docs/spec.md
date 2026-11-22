@@ -133,7 +133,8 @@ Not included: **As Played** (the engine sorts the held notes and does not keep p
    - Held chord notes sorted ascending: `chord[0..k-1]`.
    - Find the slot's pattern. On the pattern's first slot: `algorithm.start(...)`; on each later slot: one more
      `algorithm.next(k)`. (A jump, a chord-size change or a grace re-pick replays the pattern from its first slot.)
-   - `value = next(k) + randomOffset × RNG`; the pattern's first slot gets no offset. Clamp to `[0, 1]`.
+   - `value = next(k) + randomOffset × RNG`; the pattern's first slot gets no offset. Wrap into `[0, 1)`
+     (`value − floor(value)`: 1.5 → 0.5, −0.25 → 0.75), so the offset never piles notes onto the chord's ends.
    - `note = chord[floor(value * k)]` (clamp index to `k-1`).
    - No held notes or SILENCE → no note.
 3. **Output diff vs previous frame**

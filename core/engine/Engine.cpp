@@ -231,7 +231,7 @@ double Engine::noteValue(int slot) {
     return v;
 }
 
-// Spec ง3.5 / ง4 step 2: the slot's pattern runs its algorithm; one next() per slot from the pattern's first
+// Spec ยง3.5 / ยง4 step 2: the slot's pattern runs its algorithm; one next() per slot from the pattern's first
 // slot. Every slot but the first gets the pattern's offset times the RNG param.
 float Engine::slotValue(int slot, int chordSize) {
     if (slot < 0 || slot >= times_.count) return 0;
@@ -249,7 +249,8 @@ float Engine::slotValue(int slot, int chordSize) {
     algSlot_ = slot;
     algChord_ = chordSize;
     if (slot != first) value += d.randomOffset * static_cast<float>(params_[kRng]);
-    return value < 0 ? 0.0f : (value > 1 ? 1.0f : value);
+    // Wrap, not clamp: 1.5 -> 0.5, -0.25 -> 0.75 (clamping piled big offsets onto the chord's top and bottom notes).
+    return value - std::floor(value);
 }
 
 // ---- time -------------------------------------------------------------------------------------
