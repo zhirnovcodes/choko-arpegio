@@ -19,6 +19,8 @@ export interface DriverDeps {
   emit(e: PluginEvent): void;
   /** Chaos changed these params (bit per param index) in the window that starts at `time`. */
   onChaos?(mask: number, time: number): void;
+  /** The engine rebuilt its sequences while rendering (chaos shuffle, chaos param changes). */
+  onSequence?(): void;
 }
 
 export interface Driver {
@@ -70,9 +72,15 @@ export function createDriver(d: DriverDeps): Driver {
     }
   };
 
+  let version = core.ca_sequence_version(engine);
   const reportChaos = (time: number) => {
     const mask = core.ca_chaos_changes(engine) >>> 0;
     if (mask !== 0) d.onChaos?.(mask, time);
+    const v = core.ca_sequence_version(engine);
+    if (v !== version) {
+      version = v;
+      d.onSequence?.();
+    }
   };
 
   const tick = () => {

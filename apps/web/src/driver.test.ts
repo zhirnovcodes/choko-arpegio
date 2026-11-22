@@ -23,6 +23,7 @@ function rig(seed = 1) {
   let tick: (() => void) | null = null;
   const events: Midi[] = [];
   const chaos: number[] = [];
+  let sequences = 0;
   const engine = core.ca_create(RATE, seed);
   const driver = createDriver({
     core,
@@ -39,12 +40,16 @@ function rig(seed = 1) {
       if (e.type === 'midi') events.push(e);
     },
     onChaos: (mask) => chaos.push(mask),
+    onSequence: () => sequences++,
   });
   return {
     engine,
     driver,
     events,
     chaos,
+    get sequences() {
+      return sequences;
+    },
     set: (id: string, v: number) => core.ca_set_param(engine, INDEX.get(id)!, v),
     /** Advance the clock in 25 ms ticks. */
     run(seconds: number) {
@@ -154,6 +159,20 @@ describe('driver', () => {
     r.run(2.1); // beats 1, 2, 3, 4 at 120 BPM
     expect(r.chaos.length).toBe(4);
     for (const mask of r.chaos) expect(mask & (1 << INDEX.get('swing')!)).not.toBe(0);
+    r.driver.dispose();
+  });
+
+  it('reports a chaos shuffle as a sequence change, though no param moves', () => {
+    // Default chaos groups: Shuffle only.
+    const r = rig(7);
+    r.set('chaosTrigger', 2); // Beat
+    r.set('chaosBeat', 0); // every beat
+    r.driver.schedule([{ type: 'transport', time: 0, state: state(true, 0) }, ...notes(0, [60, 64])]);
+    r.run(0.3);
+    const before = r.sequences;
+    r.run(1.8); // rendered to 2.2 s (0.1 s ahead): beats 1, 2, 3, 4 at 120 BPM
+    expect(r.chaos).toEqual([]);
+    expect(r.sequences - before).toBe(4);
     r.driver.dispose();
   });
 

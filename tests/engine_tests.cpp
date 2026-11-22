@@ -381,6 +381,15 @@ void chaosButtonRollsWithinRanges() {
     }
 }
 
+void chaosTriggerChoiceDoesNotShuffle() {
+    Engine e(kRate, 22);
+    std::uint32_t before[kSeedCount];
+    for (int s = 0; s < kSeedCount; ++s) before[s] = e.seed(s);
+    for (int t : {2, 3, 1, 0, 3, 2}) e.setParam(kChaosTrigger, t);
+    for (int s = 0; s < kSeedCount; ++s) CHECK_EQ(e.seed(s), before[s]);
+    CHECK_EQ(e.takeChaosChanges(), 0u);
+}
+
 void chaosOffGroupsStayPut() {
     Engine e(kRate, 16);
     e.setParam(kChaosShuffle, 0);
@@ -488,6 +497,7 @@ void engineTests() {
     regenerationFollowsDependencies();
     chaosButtonRollsWithinRanges();
     chaosOffGroupsStayPut();
+    chaosTriggerChoiceDoesNotShuffle();
     chaosBeatTrigger();
     chaosCountsFromTheSequenceStart();
     chaosLoopTrigger();

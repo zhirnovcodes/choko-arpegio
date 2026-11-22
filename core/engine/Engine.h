@@ -107,6 +107,9 @@ public:
     double soundEnd(int slot);       // the note sounds on [slotStart, soundEnd)
     double noteValue(int slot);      // [0, 1)
     int currentPitch() const { return pitch_; }
+    // Goes up every time the sequences or the time table are rebuilt (params, Shuffle, chaos, seeds).
+    // Hosts compare it after process() to know the timeline must be redrawn.
+    std::uint32_t sequenceVersion() const { return sequenceVersion_; }
     // Beat the sequence counts from: 0, or the last note start when Retrig is on.
     double timeOrigin() const { return origin(); }
 
@@ -156,6 +159,7 @@ private:
     double params_[kParamCount];
     std::uint32_t seeds_[kSeedCount];
     unsigned dirty_ = 0;
+    std::uint32_t sequenceVersion_ = 0;
     bool triggerHigh_[kParamCount] = {};
 
     std::uint32_t chaosChanged_ = 0;

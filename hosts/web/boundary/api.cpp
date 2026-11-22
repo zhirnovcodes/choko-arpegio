@@ -79,3 +79,4 @@ CA_EXPORT double ca_slot_end(Instance* i, int slot) { return i ? i->engine.slotE
 CA_EXPORT double ca_sound_end(Instance* i, int slot) { return i ? i->engine.soundEnd(slot) : 0; }
 CA_EXPORT double ca_note_value(Instance* i, int slot) { return i ? i->engine.noteValue(slot) : 0; }
 CA_EXPORT double ca_time_origin(Instance* i) { return i ? i->engine.timeOrigin() : 0; }
+CA_EXPORT unsigned ca_sequence_version(Instance* i) { return i ? i->engine.sequenceVersion() : 0; }

@@ -22,6 +22,7 @@ export interface Core {
   ca_sound_end(engine: number, slot: number): number;
   ca_note_value(engine: number, slot: number): number;
   ca_time_origin(engine: number): number;
+  ca_sequence_version(engine: number): number;
 }
 
 /** Sequence seeds saved in state, in Engine's SeqSeed order. */

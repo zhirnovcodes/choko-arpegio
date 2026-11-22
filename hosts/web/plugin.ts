@@ -97,6 +97,7 @@ const factory: PluginFactory = {
         for (const l of [...outListeners]) l(e);
       },
       onChaos: (mask) => notifyMask(mask),
+      onSequence: () => viewChanged(),
     });
 
     // Late joiners: start from the host's transport.

@@ -104,6 +104,6 @@ if(EMSCRIPTEN)
     set_target_properties(choko-arpegio PROPERTIES SUFFIX ".wasm")
     target_link_options(choko-arpegio PRIVATE
         -O2 --no-entry -sSTANDALONE_WASM -sALLOW_MEMORY_GROWTH -sFILESYSTEM=0
-        -sEXPORTED_FUNCTIONS=_ca_alloc,_ca_free,_ca_create,_ca_destroy,_ca_set_param,_ca_param,_ca_transport,_ca_midi,_ca_all_off,_ca_process,_ca_out_count,_ca_out_frame,_ca_out_kind,_ca_out_bytes,_ca_chaos_changes,_ca_seed,_ca_set_seed,_ca_slot_count,_ca_slot_start,_ca_slot_end,_ca_sound_end,_ca_note_value,_ca_time_origin
+        -sEXPORTED_FUNCTIONS=_ca_alloc,_ca_free,_ca_create,_ca_destroy,_ca_set_param,_ca_param,_ca_transport,_ca_midi,_ca_all_off,_ca_process,_ca_out_count,_ca_out_frame,_ca_out_kind,_ca_out_bytes,_ca_chaos_changes,_ca_seed,_ca_set_seed,_ca_slot_count,_ca_slot_start,_ca_slot_end,_ca_sound_end,_ca_note_value,_ca_time_origin,_ca_sequence_version
     )
 endif()

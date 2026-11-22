@@ -134,6 +134,7 @@ void Engine::rebuild() {
     }
     if (dirty_ & kDirtyTable) buildTimeTable(times_, swing_, params_[kSwing], sustain_, intParam(kLegato) != 0, table_);
     dirty_ = 0;
+    ++sequenceVersion_;
 }
 
 // ---- chaos ------------------------------------------------------------------------------------
