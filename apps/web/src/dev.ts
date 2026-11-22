@@ -67,6 +67,8 @@ const midi = (time: number, bytes: [number, number, number]): PluginEvent => ({ 
 
 let chord: number[] = [];
 let lastChordBeat = -1;
+/** The computer keyboard took over from the random chords (until Random chords is ticked again or Play). */
+let ownNotes = false;
 
 function releaseChord(time: number) {
   if (!chord.length) return;
@@ -74,9 +76,13 @@ function releaseChord(time: number) {
   chord = [];
 }
 
+// Random chords on: a new chord every `every` beats. Off: the current chord is held; with none yet,
+// one is booked on the next beat and then held. Keys held down pause both.
 function chordTick() {
-  if (!arp || !anchor.state.playing || !demoBox.checked) return;
-  const every = Number(everySelect.value);
+  if (!arp || !anchor.state.playing || keysDown.size > 0) return;
+  const hold = !demoBox.checked;
+  if (hold && (chord.length > 0 || ownNotes)) return;
+  const every = hold ? 1 : Number(everySelect.value);
   // Booked two lookaheads ahead: the arpeggiator itself renders one LOOKAHEAD ahead, and its input
   // must arrive before that, as it does from an upstream track in IvanDAW.
   for (const n of beatsIn(lookaheadWindow(ctx.currentTime, 2 * LOOKAHEAD), anchor)) {
@@ -96,7 +102,8 @@ function chordTick() {
       arp.schedule(ons);
     }
     chord = next;
-    log(`${time.toFixed(3)}  chord ${next.map(noteName).join(' ')}`, 'in');
+    log(`${time.toFixed(3)}  chord ${next.map(noteName).join(' ')}${hold ? ' (held)' : ''}`, 'in');
+    if (hold) break;
   }
 }
 
@@ -107,8 +114,14 @@ function keyNote(e: KeyboardEvent, on: boolean) {
   const i = KEYS.indexOf(k);
   if (i < 0 || !arp || e.repeat || (e.target as HTMLElement)?.tagName === 'INPUT') return;
   if (on === keysDown.has(k)) return;
-  if (on) keysDown.add(k);
-  else keysDown.delete(k);
+  if (on) {
+    keysDown.add(k);
+    // Your own notes replace the random chord.
+    releaseChord(ctx.currentTime);
+    ownNotes = true;
+  } else {
+    keysDown.delete(k);
+  }
   const pitch = 60 + i;
   arp.schedule([midi(ctx.currentTime, on ? [0x90, pitch, 100] : [0x80, pitch, 0])]);
   if (on) log(`${ctx.currentTime.toFixed(3)}  key ${noteName(pitch)}`, 'in');
@@ -121,6 +134,7 @@ function play() {
   const time = ctx.currentTime + 0.05;
   lastClick = -1;
   lastChordBeat = -1;
+  ownNotes = false;
   send({ playing: true, bpm: bpm(), beat: 0, numerator: 4, denominator: 4, loop: null }, time);
   chordTick(); // the first chord goes with the transport, before the arpeggiator renders past it
   playBtn.disabled = true;
@@ -231,7 +245,9 @@ startBtn.onclick = start;
 playBtn.onclick = play;
 stopBtn.onclick = stop;
 demoBox.onchange = () => {
-  if (!demoBox.checked && arp) releaseChord(ctx.currentTime);
+  // Off keeps the current chord playing; on brings the changes back at the next chord beat.
+  if (demoBox.checked) ownNotes = false;
+  if (arp) log(demoBox.checked ? 'random chords on' : `holding ${chord.length ? chord.map(noteName).join(' ') : 'the next chord'}`);
 };
 bpmInput.onchange = () => {
   if (!arp || !anchor.state.playing) return;
