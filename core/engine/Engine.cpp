@@ -21,6 +21,7 @@ const ChaosRange* chaosRangeOf(int index) {
     case kSwing: return &chaosRanges::swing;
     case kChaosLoop: return &chaosRanges::chaosLoop;
     case kChaosBeat: return &chaosRanges::chaosBeat;
+    case kRng: return &chaosRanges::rng;
     default: return nullptr;
     }
 }
@@ -88,6 +89,9 @@ void Engine::store(int index, double value) {
     case kRetrig:
         slotStart_ = kNoSlot;   // the time origin moved
         break;
+    case kRng:
+        ++sequenceVersion_;     // read at play time; the timeline shows it
+        break;
     default:
         break;
     }
@@ -130,7 +134,17 @@ void Engine::rebuild() {
     }
     if (dirty_ & kDirtyNotes) {
         Rng r(seeds_[kSeedNotes]);
-        generateNotes(r, times_.count, notes_);
+        generatePatterns(r, quantaOfExp(intParam(kLoop)), kAlgorithmCount, patterns_);
+        // Each slot belongs to the pattern its start falls in (before swing).
+        int start = 0;
+        for (int p = 0; p < kMaxPatterns; ++p) patternFirstSlot_[p] = 0;
+        for (int i = 0; i < times_.count; ++i) {
+            const int p = clampInt(start / patterns_.quanta, 0, patterns_.count - 1);
+            if (i == 0 || slotPattern_[i - 1] != p) patternFirstSlot_[p] = i;
+            slotPattern_[i] = p;
+            start += times_.quanta[i];
+        }
+        algPattern_ = -1;
     }
     if (dirty_ & kDirtyTable) buildTimeTable(times_, swing_, params_[kSwing], sustain_, intParam(kLegato) != 0, table_);
     dirty_ = 0;
@@ -170,6 +184,7 @@ void Engine::rollChaos() {
         roll(kSustainMax);
         order(kSustainMin, kSustainMax);
     }
+    if (on(kChaosRng)) roll(kRng);
     if (on(kChaosChaos)) {
         roll(kChaosLoop);
         roll(kChaosBeat);
@@ -210,7 +225,31 @@ double Engine::soundEnd(int slot) {
 double Engine::noteValue(int slot) {
     rebuild();
     if (slot < 0 || slot >= table_.slotCount) return 0;
-    return notes_.value[slot];
+    const int k = held_.empty() ? 4 : held_.count();
+    const float v = slotValue(slot, k);
+    algPattern_ = -1;   // the view moved the algorithm: the next played slot replays its pattern
+    return v;
+}
+
+// Spec §3.5 / §4 step 2: the slot's pattern runs its algorithm; one next() per slot from the pattern's first
+// slot. Every slot but the first gets the pattern's offset times the RNG param.
+float Engine::slotValue(int slot, int chordSize) {
+    if (slot < 0 || slot >= times_.count) return 0;
+    const int p = slotPattern_[slot];
+    const AlgorithmData& d = patterns_.data[p];
+    ArpegioAlgorithm& algorithm = algorithms_[d.algorithm];
+    const int first = patternFirstSlot_[p];
+    if (!(algPattern_ == p && algChord_ == chordSize && algSlot_ + 1 == slot)) {
+        // A new pattern or out of order: start again and run up to this slot.
+        algorithm.start({d.startNote, d.notesCount, d.randomOffset * 0.5f + 0.5f});
+        for (int i = first; i < slot; ++i) algorithm.next(chordSize);
+    }
+    float value = algorithm.next(chordSize);
+    algPattern_ = p;
+    algSlot_ = slot;
+    algChord_ = chordSize;
+    if (slot != first) value += d.randomOffset * static_cast<float>(params_[kRng]);
+    return value < 0 ? 0.0f : (value > 1 ? 1.0f : value);
 }
 
 // ---- time -------------------------------------------------------------------------------------
@@ -331,6 +370,7 @@ bool Engine::applyNote(int frame, std::uint8_t status, std::uint8_t d1, std::uin
         return false;
     }
     const double beat = beatAtAbs(blockStart_ + frame);
+    const int heldBefore = held_.count();
     if (type == 0x90 && d2 > 0) {
         const bool fromSilence = held_.empty();
         held_.noteOn(d1, d2);
@@ -347,6 +387,7 @@ bool Engine::applyNote(int frame, std::uint8_t status, std::uint8_t d1, std::uin
     } else {
         return false;
     }
+    if (held_.count() != heldBefore) ++sequenceVersion_;   // note values follow the chord size: redraw
     return true;
 }
 
@@ -399,13 +440,13 @@ void Engine::play(int frame, long long quanta, OutBuffer& out) {
         slotStart_ = start;
         latchedVersion_ = held_.version();
         stopNote(frame, out);
-        startNote(frame, held_.pick(notes_.value[slot]), out);
+        startNote(frame, held_.pick(slotValue(slot, held_.count())), out);
         return;
     }
     if (held_.version() != latchedVersion_) {
         latchedVersion_ = held_.version();
         if (quanta - start < kGraceQuanta) {
-            const int pitch = held_.pick(notes_.value[slot]);
+            const int pitch = held_.pick(slotValue(slot, held_.count()));
             if (pitch != pitch_) {
                 stopNote(frame, out);
                 startNote(frame, pitch, out);

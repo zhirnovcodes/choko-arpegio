@@ -27,3 +27,4 @@ void sequencesTests();
 void timeTableTests();
 void chaosTests();
 void engineTests();
+void algorithmsTests();

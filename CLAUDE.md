@@ -23,7 +23,7 @@ Sibling repos: `C:\Work\BananaChords` (same layout; its drift = our swing), `C:\
 
 | Folder | Holds | Uses |
 | --- | --- | --- |
-| `core/domain/` | `Grid` (1/192-beat quanta: straight and triplet lengths), `Rng`, `Sequences` (times, swing, sustain, notes), `TimeTable`, `HeldNotes`, `Chaos`, `ChaosRanges.h` (chaos range constants) | C++20 std only; no exceptions, RTTI, I/O, allocation |
+| `core/domain/` | `Grid` (1/192-beat quanta: straight and triplet lengths), `Rng`, `Sequences` (times, swing, sustain, patterns), `Algorithms` (arpeggio algorithms), `TimeTable`, `HeldNotes`, `Chaos`, `ChaosRanges.h` (chaos range constants) | C++20 std only; no exceptions, RTTI, I/O, allocation |
 | `core/engine/` | `Engine`: params, transport, input chord, chaos, note output | core/domain |
 | `tests/` | C++ test executable `ca_tests` | core |
 | `params.json` | the only parameter list | both hosts, CMake (generates `ParamsJson.h`) |

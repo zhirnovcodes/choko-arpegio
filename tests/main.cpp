@@ -7,6 +7,7 @@ int main() {
     timeTableTests();
     chaosTests();
     engineTests();
+    algorithmsTests();
     if (gFailures == 0) {
         std::printf("ca_tests: all passed\n");
         return 0;

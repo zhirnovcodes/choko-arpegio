@@ -69,6 +69,7 @@ add_library(ca_domain
     core/domain/Sequences.cpp
     core/domain/TimeTable.cpp
     core/domain/Chaos.cpp
+    core/domain/Algorithms.cpp
 )
 target_include_directories(ca_domain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core/domain)
 ca_core_flags(ca_domain)
@@ -87,6 +88,7 @@ add_executable(ca_tests
     tests/timetable_tests.cpp
     tests/chaos_tests.cpp
     tests/engine_tests.cpp
+    tests/algorithms_tests.cpp
 )
 target_link_libraries(ca_tests PRIVATE ca_engine)
 ca_core_flags(ca_tests)

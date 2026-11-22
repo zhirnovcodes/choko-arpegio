@@ -47,8 +47,18 @@ void generateSustain(Rng& rng, int count, int minExp, int maxExp, Sustain& out) 
     for (int i = 0; i < kMaxSlots; ++i) out.quanta[i] = i < count ? quantaOfExp(rng.range(minExp, maxExp)) : 0;
 }
 
-void generateNotes(Rng& rng, int count, Notes& out) {
-    for (int i = 0; i < kMaxSlots; ++i) out.value[i] = i < count ? rng.unit() : 0;
+void generatePatterns(Rng& rng, int loopQuanta, int algorithmCount, Patterns& out) {
+    static constexpr int kNotesCounts[] = {1, 2, 3, 4, 6, 8};
+    out.quanta = rng.range(kPatternBeatsMin, kPatternBeatsMax) * kQuantaPerBeat;
+    out.count = clampInt((loopQuanta + out.quanta - 1) / out.quanta, 1, kMaxPatterns);
+    for (int i = 0; i < kMaxPatterns; ++i) out.data[i] = AlgorithmData{};
+    for (int i = 0; i < out.count; ++i) {
+        AlgorithmData& d = out.data[i];
+        d.startNote = static_cast<float>(rng.unit());
+        d.randomOffset = static_cast<float>(rng.signedUnit());
+        d.algorithm = rng.range(0, algorithmCount > 0 ? algorithmCount - 1 : 0);
+        d.notesCount = kNotesCounts[rng.range(0, 5)];
+    }
 }
 
 } // namespace ca

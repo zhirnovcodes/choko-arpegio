@@ -21,6 +21,9 @@ constexpr ChaosRange sustainMax{-2, 3, -5, 4};
 // 0..1.
 constexpr ChaosRange swing{0, 0.2, 0, 1};
 
+// 0..1. Chaos 1 reaches past 1, so a roll lands on 1 more often.
+constexpr ChaosRange rng{0, 0.22, 0, 1.2};
+
 // 2^n loops, -3..3. Chaos 0: 1..8 loops. Chaos 1: 1/8..1 loop.
 constexpr ChaosRange chaosLoop{0, 3, -3, 0};
 

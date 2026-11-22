@@ -89,11 +89,28 @@ void sustainInRange() {
     CHECK_EQ(s.quanta[100], 0);
 }
 
-void notesInUnitRange() {
-    Rng rng(5);
-    Notes n;
-    generateNotes(rng, 64, n);
-    for (int i = 0; i < 64; ++i) CHECK(n.value[i] >= 0 && n.value[i] < 1);
+void patternsCoverTheLoop() {
+    for (int loopExp = -2; loopExp <= 5; ++loopExp) {
+        for (std::uint64_t seed = 1; seed <= 20; ++seed) {
+            Rng rng(seed * 104729 + loopExp);
+            Patterns p;
+            const int loop = quantaOfExp(loopExp);
+            generatePatterns(rng, loop, 15, p);
+            CHECK(p.quanta % kQuantaPerBeat == 0);
+            CHECK(p.quanta >= kPatternBeatsMin * kQuantaPerBeat && p.quanta <= kPatternBeatsMax * kQuantaPerBeat);
+            CHECK(p.count >= 1 && p.count <= kMaxPatterns);
+            CHECK(p.count * p.quanta >= loop);
+            CHECK((p.count - 1) * p.quanta < loop);
+            for (int i = 0; i < p.count; ++i) {
+                const AlgorithmData& d = p.data[i];
+                CHECK(d.startNote >= 0 && d.startNote < 1);
+                CHECK(d.randomOffset >= -1 && d.randomOffset < 1);
+                CHECK(d.algorithm >= 0 && d.algorithm < 15);
+                const int n = d.notesCount;
+                CHECK(n == 1 || n == 2 || n == 3 || n == 4 || n == 6 || n == 8);
+            }
+        }
+    }
 }
 
 } // namespace
@@ -104,5 +121,5 @@ void sequencesTests() {
     maxSlots();
     swingHasOneValuePerPair();
     sustainInRange();
-    notesInUnitRange();
+    patternsCoverTheLoop();
 }

@@ -26,10 +26,12 @@ describe('params.json', () => {
     const order = [
       'loop', 'noteLengthMin', 'noteLengthMax', 'legato', 'sustainMin', 'sustainMax', 'swing', 'retrig',
       'shuffle', 'chaos', 'chaosValue', 'chaosTrigger', 'chaosLoop', 'chaosBeat',
-      'chaosShuffle', 'chaosLength', 'chaosSwing', 'chaosSustain', 'chaosChaos',
+      'chaosShuffle', 'chaosLength', 'chaosSwing', 'chaosSustain', 'chaosChaos', 'rng', 'chaosRng',
     ];
     expect(PARAMS.slice(0, order.length).map((p) => p.id)).toEqual(order);
     expect(INDEX.get('chaosChaos')).toBe(18);
+    expect(INDEX.get('rng')).toBe(19);
+    expect(INDEX.get('chaosRng')).toBe(20);
   });
 
   it('round-trips normalized values', () => {

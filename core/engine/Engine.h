@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 
+#include "Algorithms.h"
 #include "Chaos.h"
 #include "HeldNotes.h"
 #include "Rng.h"
@@ -30,11 +31,14 @@ enum Param : int {
     kChaosSwing,
     kChaosSustain,
     kChaosChaos,
+    kRng,
+    kChaosRng,
     kParamCount
 };
 
 // The random sequences. Each has its own seed, so a saved state replays exactly.
 // The time table is built from the others and has no seed.
+// kSeedNotes seeds the pattern sequence (spec ง3.5).
 enum SeqSeed : int { kSeedTimes = 0, kSeedSwing, kSeedSustain, kSeedNotes, kSeedCount };
 
 // A chord change this soon after a slot starts still re-picks the slot's note (spec ยง4.1): 1/32 beat.
@@ -105,7 +109,8 @@ public:
     double slotStart(int slot);      // beats, after swing
     double slotEnd(int slot);
     double soundEnd(int slot);       // the note sounds on [slotStart, soundEnd)
-    double noteValue(int slot);      // [0, 1)
+    // [0, 1]: the note the slot plays for the held chord (4 notes when none is held), RNG offset included.
+    double noteValue(int slot);
     int currentPitch() const { return pitch_; }
     // Goes up every time the sequences or the time table are rebuilt (params, Shuffle, chaos, seeds).
     // Hosts compare it after process() to know the timeline must be redrawn.
@@ -152,6 +157,7 @@ private:
     void flushNotes(int frame, bool& notesChanged, OutBuffer& out);
     void stopNote(int frame, OutBuffer& out);
     void startNote(int frame, int pitch, OutBuffer& out);
+    float slotValue(int slot, int chordSize);
 
     double sampleRate_;
     Rng master_;
@@ -168,7 +174,16 @@ private:
     Times times_;
     Swing swing_;
     Sustain sustain_;
-    Notes notes_;
+    Patterns patterns_;
+    int slotPattern_[kMaxSlots] = {};        // pattern of each slot (by its start before swing)
+    int patternFirstSlot_[kMaxPatterns] = {};
+
+    // Every algorithm, made once. The one playing now runs on from slot to slot; anything else (a jump, a
+    // chord size change, the view) replays its pattern from the first slot.
+    Algorithms algorithms_;
+    int algPattern_ = -1;
+    int algSlot_ = -1;
+    int algChord_ = 0;
     TimeTable table_;
 
     // Transport: beat at absolute frame f = anchorBeat_ + (f - anchorFrame_) * bpm / (60 * rate).

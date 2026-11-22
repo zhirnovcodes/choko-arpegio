@@ -79,9 +79,46 @@ Built (not random) from `times`, `swing` × `swingParam`, `sustain`, `legato`.
 
 Lookup: `cell = floor(positionInLoopQuanta / cellSize)` → slot index or SILENCE. `positionInLoop` wraps by `loop`.
 
-### 3.5 `notes` — pitch choice per slot
-- Size `N`, each `unit()` in `[0, 1)`.
-- Converted at play time against the currently held chord (§4 step 2), so the same sequence works for any chord.
+### 3.5 `patterns` — arpeggio algorithms over the loop
+Plain random notes sounded too random, so notes come from arpeggio **algorithms** (`core/domain/Algorithms.*`).
+The algorithm list and the choice are hidden from the user.
+
+1. Roll a pattern length: a whole number of beats in `[2, 8]`.
+2. `count = ceil(loop / pattern length)` (at least 1, at most 16). Each pattern is an `AlgorithmData`:
+   - `startNote` — `unit()`: the algorithm's base note,
+   - `randomOffset` — `signedUnit()`: scaled by the **RNG** param at play time,
+   - `algorithm` — index of a random algorithm,
+   - `notesCount` — one of `1, 2, 3, 4, 6, 8`: how many neighbouring chord notes the algorithm walks over.
+3. A slot belongs to the pattern its start (before swing) falls in.
+
+Seeded by `kSeedNotes`; regenerated with the other sequences (§6.1).
+
+**Algorithms.** Interface `ArpegioAlgorithm`: `start(AlgorithmParams{baseNote, notesCount, rng})` and
+`float next(int chordSize)` → note value in `[0, 1]`. The engine makes one instance of each at start.
+Each walks a window of `min(notesCount, chordSize)` chord notes; its lowest note is the one `baseNote` picks,
+moved down so the window fits inside the chord. `next` returns the middle of the chosen note's band.
+
+| # | Algorithm | Order (C E G) |
+|---|---|---|
+| 0 | Up | C E G C E G |
+| 1 | Down | G E C G E C |
+| 2 | Up-Down (exclusive) | C E G E C E G |
+| 3 | Up-Down (inclusive) | C E G G E C C E G |
+| 4 | Down-Up | G E C E G E C |
+| 5 | Converge | C G E (outside notes, moving inward) |
+| 6 | Diverge | E C G (middle, moving outward) |
+| 7 | Thumb Up | C E C G (lowest note between the others) |
+| 8 | Pinky Up | G C G E (highest note between the others) |
+| 9 | Alberti | C G E G (low, high, middle, high) |
+| 10 | Random Walk | each step ±1 position, reflecting at the ends; seeded by `rng` |
+| 11 | Leapfrog | 1 3 2 4 3 5 |
+| 12 | Staircase | 1 2 3, 2 3 4, 3 4 5 |
+| 13 | Trill | 1 2 1 2, 2 3 2 3 |
+| 14 | Root Bounce | 1 2 1 3 1 4 (back to the chord's root) |
+
+Window positions past the end wrap around inside the window (Leapfrog, Staircase, Trill).
+Not included: **As Played** (the engine sorts the held notes and does not keep press order) and **Chord**
+(the engine plays one note at a time).
 
 ---
 
@@ -94,7 +131,10 @@ Lookup: `cell = floor(positionInLoopQuanta / cellSize)` → slot index or SILENC
    - `posInLoop = time mod loop`, convert to quanta, look up `timeTable` → slot index `i` or SILENCE.
 2. **Slot index → MIDI note**
    - Held chord notes sorted ascending: `chord[0..k-1]`.
-   - `note = chord[floor(notes[i] * k)]` (clamp index to `k-1`).
+   - Find the slot's pattern. On the pattern's first slot: `algorithm.start(...)`; on each later slot: one more
+     `algorithm.next(k)`. (A jump, a chord-size change or a grace re-pick replays the pattern from its first slot.)
+   - `value = next(k) + randomOffset × RNG`; the pattern's first slot gets no offset. Clamp to `[0, 1]`.
+   - `note = chord[floor(value * k)]` (clamp index to `k-1`).
    - No held notes or SILENCE → no note.
 3. **Output diff vs previous frame**
    - Same note as last frame and same slot → keep sounding (no new events).
@@ -136,6 +176,7 @@ Same model as Beatality. Logic lives in the **engine**; when chaos changes a par
   | chaos swing | `swing` | time table |
   | chaos sustain | `sustainMin`, `sustainMax` | sustain + time table |
   | chaos chaos | `chaosLoop`, `chaosBeat` | — |
+  | chaos rng | `rng` | — |
 - Toggles and enums (legato, retrig, trigger type) are never changed by chaos.
 
 ### 5.1 `core/domain/ChaosRanges.h`
@@ -148,6 +189,7 @@ Chaos ranges are `constexpr ChaosRange{low0, high0, low1, high1}` constants in `
 | `swing` | 0 … 0.2 | 0 … 1 | `{0, 0.2, 0, 1}` |
 | `chaosLoop` | 1 … 8 loops | 1/8 … 1 loop | `{0, 3, -3, 0}` |
 | `chaosBeat` | 2 … 32 beats | 1/8 … 2 beats | `{1, 5, -3, 1}` |
+| `rng` | 0 … 0.22 | 0 … 1.2 (clamped to 1) | `{0, 0.22, 0, 1.2}` |
 
 ---
 
@@ -178,6 +220,8 @@ Pow-of-2 params are `kind: "int"` exponents; the range column shows beats, the e
 | 17 | `chaosSwing` | Chaos Swing | chaos params | boolean | 0/1 | — | 0 | no | — | — | — | |
 | 18 | `chaosSustain` | Chaos Sustain | chaos params | boolean | 0/1 | — | 0 | no | — | — | — | |
 | 19 | `chaosChaos` | Chaos Chaos | chaos params | boolean | 0/1 | — | 0 | no | — | — | — | Chaos changes Chaos Loop / Chaos Beat |
+| 20 | `rng` | RNG | main | float | 0 … 1 | — | 0 | yes | — (read at play time) | 0 … 0.22 | 0 … 1.2 | Scales each pattern's random note offset (§3.5) |
+| 21 | `chaosRng` | Chaos RNG | chaos params | boolean | 0/1 | — | 0 | no | — | — | — | Chaos changes RNG |
 
 Defaults are proposals — adjust freely.
 

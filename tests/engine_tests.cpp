@@ -284,6 +284,28 @@ void retrigStartsTheSequenceAtTheNote() {
     }
 }
 
+void rngParamAndChaosRng() {
+    Engine e(kRate, 31);
+    const std::uint32_t version = e.sequenceVersion();
+    e.setParam(kRng, 0.5);
+    CHECK(e.sequenceVersion() != version);   // the timeline shows the offsets
+    CHECK_EQ(e.param(kRng), 0.5);
+
+    e.setParam(kChaosShuffle, 0);
+    e.setParam(kChaosRng, 1);
+    e.setParam(kChaosValue, 1);
+    e.takeChaosChanges();
+    bool sawOne = false;
+    for (int i = 0; i < 40; ++i) {
+        e.setParam(kChaos, 1);
+        e.setParam(kChaos, 0);
+        CHECK(e.takeChaosChanges() & (1u << kRng));
+        CHECK(e.param(kRng) >= 0 && e.param(kRng) <= 1);
+        sawOne = sawOne || e.param(kRng) == 1;
+    }
+    CHECK(sawOne);   // chaos 1 reaches 1.2: clamped rolls land on 1
+}
+
 void seedsReplay() {
     Engine a(kRate, 11);
     a.setParam(kNoteLengthMin, -4);
@@ -485,6 +507,7 @@ void engineTests() {
     onlyHeldNotesWithTheirVelocity();
     noInputNoOutput();
     notesFollowTheSequence();
+    rngParamAndChaosRng();
     sameNoteRestartsEverySlot();
     sustainSetsNoteLength();
     stopReleasesEverything();

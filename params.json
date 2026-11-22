@@ -38,6 +38,10 @@
     { "id": "chaosSustain", "label": "Chaos Sustain", "kind": "boolean", "min": 0, "max": 1, "default": 0,
       "group": "Chaos Params", "automatable": false },
     { "id": "chaosChaos", "label": "Chaos Chaos", "kind": "boolean", "min": 0, "max": 1, "default": 0,
+      "group": "Chaos Params", "automatable": false },
+    { "id": "rng", "label": "RNG", "kind": "float", "min": 0, "max": 1, "default": 0,
+      "group": "Main", "automatable": true },
+    { "id": "chaosRng", "label": "Chaos RNG", "kind": "boolean", "min": 0, "max": 1, "default": 0,
       "group": "Chaos Params", "automatable": false }
   ]
 }
