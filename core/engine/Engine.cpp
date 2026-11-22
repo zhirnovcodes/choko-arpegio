@@ -350,7 +350,7 @@ bool Engine::applyNote(int frame, std::uint8_t status, std::uint8_t d1, std::uin
     return true;
 }
 
-// Notes change only on the 1/64 beat grid (from the time origin): every slot border and sound end is on it.
+// Notes change only on the 1/192 beat grid (from the time origin): every slot border and sound end is on it.
 void Engine::renderSegment(int from, int to, OutBuffer& out) {
     if (!playing_ || to <= from) return;
     const long long absFrom = blockStart_ + from;

@@ -6,6 +6,8 @@ using namespace ca;
 namespace {
 
 bool isPow2(int v) { return v > 0 && (v & (v - 1)) == 0; }
+// A power-of-two length of beats in quanta: 3 · 2^k.
+bool isLength(int v) { return v % 3 == 0 && isPow2(v / 3); }
 
 void timesFillTheLoop() {
     for (int loopExp = -2; loopExp <= 5; ++loopExp) {
@@ -22,7 +24,7 @@ void timesFillTheLoop() {
                     CHECK(t.count >= 1);
                     CHECK(t.count <= kMaxSlots);
                     for (int i = 0; i < t.count; ++i) {
-                        CHECK(isPow2(t.quanta[i]));
+                        CHECK(isLength(t.quanta[i]));
                         if (lo < loopExp) {
                             CHECK(t.quanta[i] >= quantaOfExp(lo));
                             CHECK(t.quanta[i] <= quantaOfExp(hi));
@@ -45,9 +47,9 @@ void timesUseEveryLength() {
         Times t;
         generateTimes(rng, 2, -2, 0, t);
         for (int i = 0; i < t.count; ++i) {
-            if (t.quanta[i] == 16) seen[0] = true;
-            if (t.quanta[i] == 32) seen[1] = true;
-            if (t.quanta[i] == 64) seen[2] = true;
+            if (t.quanta[i] == quantaOfExp(-2)) seen[0] = true;
+            if (t.quanta[i] == quantaOfExp(-1)) seen[1] = true;
+            if (t.quanta[i] == quantaOfExp(0)) seen[2] = true;
         }
     }
     CHECK(seen[0] && seen[1] && seen[2]);
@@ -76,7 +78,7 @@ void sustainInRange() {
     Sustain s;
     generateSustain(rng, 100, -3, 1, s);   // swapped order is fine too
     for (int i = 0; i < 100; ++i) {
-        CHECK(isPow2(s.quanta[i]));
+        CHECK(isLength(s.quanta[i]));
         CHECK(s.quanta[i] >= quantaOfExp(-3));
         CHECK(s.quanta[i] <= quantaOfExp(1));
     }

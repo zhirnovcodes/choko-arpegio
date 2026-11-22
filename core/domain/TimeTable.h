@@ -20,6 +20,11 @@ struct TimeTable {
     int soundEnd[kMaxSlots] = {};
 };
 
+// How far swing value d in [-1, 1] moves a border next to a slot of `length` quanta: up to length / 3,
+// snapped to the nearest straight (3 · 2^j quanta: 1/64, 1/32 … beat) or triplet (2^j quanta: … 1/12, 1/6,
+// 1/3 beat) length. Signed like d.
+int swingShift(double d, int length);
+
 // swingAmount in [0, 1] scales every swing value (the Swing param). Legato: notes fill their slots.
 void buildTimeTable(const Times& times, const Swing& swing, double swingAmount, const Sustain& sustain, bool legato,
                     TimeTable& out);

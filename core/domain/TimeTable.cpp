@@ -1,5 +1,7 @@
 #include "TimeTable.h"
 
+#include <initializer_list>
+
 namespace ca {
 
 namespace {
@@ -13,14 +15,33 @@ int gcd(int a, int b) {
     return a < 0 ? -a : a;
 }
 
-int roundAway(double v) { return static_cast<int>(v < 0 ? v - 0.5 : v + 0.5); }
-
 long long wrap(long long q, int loop) {
     long long r = q % loop;
     return r < 0 ? r + loop : r;
 }
 
 } // namespace
+
+int swingShift(double d, int length) {
+    if (d > 1) d = 1;
+    if (d < -1) d = -1;
+    const int limit = length / 3;   // lengths are 3 · 2^k quanta, so this is exact
+    const double target = (d < 0 ? -d : d) * limit;
+    // Nearest musical length up to the limit: straight 3 · 2^j or triplet 2^j quanta; 0 below half a quantum.
+    int best = 0;
+    double bestDistance = target;
+    for (int n = 1; n <= limit; n *= 2) {
+        for (int candidate : {n, 3 * n}) {
+            if (candidate > limit) continue;
+            const double distance = candidate > target ? candidate - target : target - candidate;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+    }
+    return d < 0 ? -best : best;
+}
 
 void buildTimeTable(const Times& times, const Swing& swing, double swingAmount, const Sustain& sustain, bool legato,
                     TimeTable& out) {
@@ -34,13 +55,12 @@ void buildTimeTable(const Times& times, const Swing& swing, double swingAmount, 
     const int total = n > 0 ? out.border[n] : kQuantaPerBeat;
     out.loopQuanta = total;
 
-    // Swing moves each inner border (same as BananaChords drift).
-    // d > 0: the first slot grows into the second by up to half the second.
-    // d < 0: the second slot starts early by up to half the first.
+    // Swing moves each inner border (like BananaChords drift, at most a third, on straight or triplet lengths).
+    // d > 0: the first slot grows into the second by up to a third of the second.
+    // d < 0: the second slot starts early by up to a third of the first.
     for (int i = 1; i < n; ++i) {
         const double d = swing.value[i - 1] * swingAmount;
-        const int shift = d >= 0 ? roundAway(d * times.quanta[i] * 0.5) : roundAway(d * times.quanta[i - 1] * 0.5);
-        out.border[i] += shift;
+        out.border[i] += swingShift(d, d >= 0 ? times.quanta[i] : times.quanta[i - 1]);
     }
     // Every slot keeps at least one quantum.
     for (int i = 1; i < n; ++i) {

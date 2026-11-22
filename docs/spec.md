@@ -25,7 +25,7 @@ A MIDI arpeggiator / note generator.
 
 - **Time unit = beats** (quarter notes). `1` = one beat, `1/4` = a sixteenth note.
 - Every length param marked "only pow of 2" is stored as an **integer exponent** `e`, value = `2^e` beats (same approach as Beatality `fxTimeMin`/`fxTimeMax`). The UI displays it as a fraction (`1/16`, `1/8`, … `16`).
-- **Grid quantum `Q`** — smallest time step used for swing shifts and the time table. Use `Q = 1/64` beat (fixed constant, `kQuantaPerBeat = 64`). All lengths/borders are integers in quanta. This satisfies "moves should be done in fractions, not free time values".
+- **Grid quantum `Q`** — smallest time step used for swing shifts and the time table. Use `Q = 1/192` beat (64 × 3, `kQuantaPerBeat = 192`), so every straight length (2^n beats) and every triplet of one (1/3, 1/6, 1/12 … beat = 1/8t, 1/16t, 1/32t …) is a whole number of quanta. All lengths/borders are integers in quanta. This satisfies "moves should be done in fractions, not free time values".
 - If a `min` param ends up above its `max` (user or chaos), **swap them** when generating (Beatality behaviour).
 - Random values: `unit()` = `[0, 1)`, `signedUnit()` = `[-1, 1)`. Use a seeded RNG (copy `Rng.h` from BananaChords). Chaos uses its own RNG instance so chaos rolls don't disturb sequence RNG state.
 
@@ -67,10 +67,10 @@ Built (not random) from `times`, `swing` × `swingParam`, `sustain`, `legato`.
 
 1. Slot lengths in quanta: `len[i] = times[i] / Q`. Borders: `border[0] = 0`, `border[i+1] = border[i] + len[i]`.
 2. Apply swing to every inner border `i` (between slot `i-1` and slot `i`), with `d = swing[i-1] * swingParam`:
-   - `d > 0`: first slot grows to the right by `d * len[i] / 2` (up to half of the second slot).
-   - `d < 0`: second slot starts earlier by `|d| * len[i-1] / 2` (up to half of the first slot).
+   - `d > 0`: first slot grows to the right by `d * len[i] / 3` (up to a third of the second slot).
+   - `d < 0`: second slot starts earlier by `|d| * len[i-1] / 3` (up to a third of the first slot).
    - `d = 0`: no move.
-   - Round shift to whole quanta (round away from zero, like BananaChords `roundAway`).
+   - Snap the shift to the nearest musical length not above the limit: straight (2^j beats: 1/64, 1/32 … beat) or triplet (2^j / 3 beats: 1/8t, 1/16t …); 0 when below half a quantum (`swingShift` in `TimeTable.cpp`). E.g. next to a 1-beat note, Swing 1 moves the border 1/3 beat (an 8th triplet), Swing 0.5 moves it 1/6 beat (a 16th triplet).
    - Clamp so every slot keeps at least 1 quantum (forward pass then backward pass — copy BananaChords).
 3. Sounding part of slot `i`: `[border[i], border[i] + min(sustain[i], border[i+1] - border[i]))`. The rest of the slot is **SILENCE**.
 4. Cell size = gcd of all borders and all sound-end points (in quanta); `cellCount = loopQuanta / cellSize`. Each cell stores a slot index or `SILENCE` (e.g. `0xFFFF`).

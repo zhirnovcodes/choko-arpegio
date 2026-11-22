@@ -23,7 +23,7 @@ Sibling repos: `C:\Work\BananaChords` (same layout; its drift = our swing), `C:\
 
 | Folder | Holds | Uses |
 | --- | --- | --- |
-| `core/domain/` | `Grid` (1/64-beat quanta), `Rng`, `Sequences` (times, swing, sustain, notes), `TimeTable`, `HeldNotes`, `Chaos`, `ChaosRanges.h` (chaos range constants) | C++20 std only; no exceptions, RTTI, I/O, allocation |
+| `core/domain/` | `Grid` (1/192-beat quanta: straight and triplet lengths), `Rng`, `Sequences` (times, swing, sustain, notes), `TimeTable`, `HeldNotes`, `Chaos`, `ChaosRanges.h` (chaos range constants) | C++20 std only; no exceptions, RTTI, I/O, allocation |
 | `core/engine/` | `Engine`: params, transport, input chord, chaos, note output | core/domain |
 | `tests/` | C++ test executable `ca_tests` | core |
 | `params.json` | the only parameter list | both hosts, CMake (generates `ParamsJson.h`) |
@@ -51,7 +51,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -
 - All behaviour lives in `core/`. Hosts translate; they never decide musical behaviour.
 - `params.json` is append-only. Ids and indexes never change. `enum Param` in `Engine.h` follows it.
 - Pow-of-2 params are stored as integer exponents (`"display": "pow2"`): value n means 2^n beats (2^n loops for `chaosLoop`).
-- Musical time in the core is in quanta (1/64 beat, `core/domain/Grid.h`). Notes change only on that grid or on input events.
+- Musical time in the core is in quanta (1/192 beat, so triplets fit; `core/domain/Grid.h`). Notes change only on that grid or on input events.
 - The same input gives the same output for any block size. Core tests check sizes 1, 64, 128, 512, 4096.
 - Every note-on gets a note-off (stop, seek, CC 120/123, chord released, `allOff`). One output note at a time.
 - Random sequences come from per-sequence seeds; state saves the seeds. Chaos uses its own RNG.
