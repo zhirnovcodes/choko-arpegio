@@ -1,0 +1,8 @@
+<svg width="207" height="169" viewBox="0 0 207 169" xmlns="http://www.w3.org/2000/svg">
+  <!-- Step 3.1: base shapes. Sizes, positions and colours from the design (Frame 1.svg), device origin 262,39 subtracted.
+       The main and chaos pages share the one screen (the design shows the chaos page 208 px to the right). -->
+  <path id="body" d="M0 0H207V169H0Z" fill="#3A2218"/>
+  <rect id="screen" x="11" y="10" width="185" height="105" rx="9" fill="#A8E3CC"/>
+  <rect id="button-shuffle" x="11" y="140" width="74" height="20" rx="1" fill="#D9DEE2"/>
+  <rect id="button-chaos" x="122" y="140" width="74" height="20" rx="1" fill="#D9DEE2"/>
+</svg>
