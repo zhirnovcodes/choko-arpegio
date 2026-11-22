@@ -107,6 +107,8 @@ public:
     double soundEnd(int slot);       // the note sounds on [slotStart, soundEnd)
     double noteValue(int slot);      // [0, 1)
     int currentPitch() const { return pitch_; }
+    // Beat the sequence counts from: 0, or the last note start when Retrig is on.
+    double timeOrigin() const { return origin(); }
 
 private:
     enum Dirty : unsigned {
@@ -156,8 +158,6 @@ private:
     unsigned dirty_ = 0;
     bool triggerHigh_[kParamCount] = {};
 
-    ChaosRange chaosRange_[kParamCount] = {};
-    bool hasChaosRange_[kParamCount] = {};
     std::uint32_t chaosChanged_ = 0;
     ChaosClock chaosClock_;
 

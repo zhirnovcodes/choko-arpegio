@@ -19,11 +19,9 @@ function(ca_core_flags target)
     endif()
 endfunction()
 
-# params.json is the one parameter list, chaos-ranges.json the chaos ranges.
-# CMake writes both into headers the engine reads. Editing either re-runs configure.
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/params.json
-    ${CMAKE_CURRENT_SOURCE_DIR}/chaos-ranges.json)
+# params.json is the one parameter list. CMake writes it into a header the engine reads
+# (defaults, ranges, kinds). Editing params.json re-runs configure.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/params.json)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/params.json CA_PARAMS_JSON)
 string(JSON ca_param_count LENGTH "${CA_PARAMS_JSON}" params)
@@ -46,22 +44,9 @@ foreach(index RANGE ${ca_param_last})
     string(APPEND ca_param_rows "    {\"${param_id}\", \"${param_kind}\", ${param_min}, ${param_max}, ${param_default}, ${param_pow2}},\n")
 endforeach()
 
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/chaos-ranges.json CA_CHAOS_JSON)
-string(JSON ca_chaos_count LENGTH "${CA_CHAOS_JSON}" ranges)
-math(EXPR ca_chaos_last "${ca_chaos_count} - 1")
-set(ca_chaos_rows "")
-foreach(index RANGE ${ca_chaos_last})
-    string(JSON chaos_id MEMBER "${CA_CHAOS_JSON}" ranges ${index})
-    string(JSON low0 GET "${CA_CHAOS_JSON}" ranges ${chaos_id} chaos0 0)
-    string(JSON high0 GET "${CA_CHAOS_JSON}" ranges ${chaos_id} chaos0 1)
-    string(JSON low1 GET "${CA_CHAOS_JSON}" ranges ${chaos_id} chaos1 0)
-    string(JSON high1 GET "${CA_CHAOS_JSON}" ranges ${chaos_id} chaos1 1)
-    string(APPEND ca_chaos_rows "    {\"${chaos_id}\", ${low0}, ${high0}, ${low1}, ${high1}},\n")
-endforeach()
-
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/ParamsJson.h CONTENT
 "#pragma once
-// Written by CMake from params.json and chaos-ranges.json. Do not edit.
+// Written by CMake from params.json. Do not edit.
 
 namespace ca {
 
@@ -76,18 +61,6 @@ struct ParamSpec {
 
 inline constexpr ParamSpec kParams[] = {
 ${ca_param_rows}};
-
-// Plain values as written in chaos-ranges.json: beats (or loops) for pow2 params.
-struct ChaosRangeSpec {
-    const char* id;
-    double low0;
-    double high0;
-    double low1;
-    double high1;
-};
-
-inline constexpr ChaosRangeSpec kChaosRanges[] = {
-${ca_chaos_rows}};
 
 } // namespace ca
 " @ONLY)
@@ -123,5 +96,14 @@ if(EMSCRIPTEN)
     set_target_properties(ca_tests PROPERTIES SUFFIX ".js")
     # Tests keep Engines on the stack (~60 KB each); emscripten's default stack is 64 KB.
     target_link_options(ca_tests PRIVATE -sSTACK_SIZE=8MB)
-    # The wasm plugin target (hosts/web/boundary/api.cpp) arrives in step 2.
+
+    # Standalone module: instantiated directly, no Emscripten JS glue.
+    add_executable(choko-arpegio hosts/web/boundary/api.cpp)
+    target_link_libraries(choko-arpegio PRIVATE ca_engine)
+    ca_core_flags(choko-arpegio)
+    set_target_properties(choko-arpegio PROPERTIES SUFFIX ".wasm")
+    target_link_options(choko-arpegio PRIVATE
+        -O2 --no-entry -sSTANDALONE_WASM -sALLOW_MEMORY_GROWTH -sFILESYSTEM=0
+        -sEXPORTED_FUNCTIONS=_ca_alloc,_ca_free,_ca_create,_ca_destroy,_ca_set_param,_ca_param,_ca_transport,_ca_midi,_ca_all_off,_ca_process,_ca_out_count,_ca_out_frame,_ca_out_kind,_ca_out_bytes,_ca_chaos_changes,_ca_seed,_ca_set_seed,_ca_slot_count,_ca_slot_start,_ca_slot_end,_ca_sound_end,_ca_note_value,_ca_time_origin
+    )
 endif()

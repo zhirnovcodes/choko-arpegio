@@ -3,7 +3,7 @@
 namespace ca {
 
 // A param's chaos range: [low0, high0] at chaos 0, [low1, high1] at chaos 1 (docs/spec.md §5).
-// For pow2 params these are exponents (the engine converts the beats in chaos-ranges.json).
+// For pow2 params these are exponents. The values live in ChaosRanges.h.
 struct ChaosRange {
     double low0 = 0;
     double high0 = 0;

@@ -1,15 +1,29 @@
 #include "Engine.h"
 
 #include <cmath>
-#include <cstring>
 
-#include "ParamsJson.h"   // written by CMake from params.json and chaos-ranges.json
+#include "ChaosRanges.h"
+#include "ParamsJson.h"   // written by CMake from params.json
 
 namespace ca {
 
 static_assert(sizeof(kParams) / sizeof(kParams[0]) == kParamCount, "params.json and enum Param differ in length");
 
 namespace {
+
+// The chaos range of a param, or nullptr when chaos never changes it.
+const ChaosRange* chaosRangeOf(int index) {
+    switch (index) {
+    case kNoteLengthMin: return &chaosRanges::noteLengthMin;
+    case kNoteLengthMax: return &chaosRanges::noteLengthMax;
+    case kSustainMin: return &chaosRanges::sustainMin;
+    case kSustainMax: return &chaosRanges::sustainMax;
+    case kSwing: return &chaosRanges::swing;
+    case kChaosLoop: return &chaosRanges::chaosLoop;
+    case kChaosBeat: return &chaosRanges::chaosBeat;
+    default: return nullptr;
+    }
+}
 
 bool rounds(const ParamSpec& p) { return p.kind[0] == 'i' || p.kind[0] == 'c' || p.kind[0] == 'b' || p.kind[0] == 't'; }
 bool isTrigger(const ParamSpec& p) { return p.kind[0] == 't'; }
@@ -22,20 +36,6 @@ constexpr double kJumpBeats = 1e-3;
 Engine::Engine(double sampleRate, std::uint32_t seed)
     : sampleRate_(sampleRate > 0 ? sampleRate : 48000), master_(seed), chaosRng_(seed ^ 0xC4A05C4A05ull) {
     for (int i = 0; i < kParamCount; ++i) params_[i] = kParams[i].def;
-
-    // Chaos ranges by param id. Pow2 params: beats (or loops) in the file, exponents here.
-    for (const ChaosRangeSpec& spec : kChaosRanges) {
-        for (int i = 0; i < kParamCount; ++i) {
-            if (std::strcmp(spec.id, kParams[i].id) != 0) continue;
-            ChaosRange r{spec.low0, spec.high0, spec.low1, spec.high1};
-            if (kParams[i].pow2) {
-                r = {std::log2(spec.low0), std::log2(spec.high0), std::log2(spec.low1), std::log2(spec.high1)};
-            }
-            chaosRange_[i] = r;
-            hasChaosRange_[i] = true;
-        }
-    }
-
     reseed(kDirtyAll);
     rebuild();
 }
@@ -141,10 +141,10 @@ void Engine::rebuild() {
 void Engine::rollChaos() {
     const double chaos = params_[kChaosValue];
     auto roll = [&](int index) {
-        if (!hasChaosRange_[index]) return;
-        const ParamSpec& spec = kParams[index];
-        const double v = rounds(spec) ? chaosStep(chaosRange_[index], chaos, chaosRng_.unit())
-                                      : chaosValue(chaosRange_[index], chaos, chaosRng_.unit());
+        const ChaosRange* range = chaosRangeOf(index);
+        if (range == nullptr) return;
+        const double v = rounds(kParams[index]) ? chaosStep(*range, chaos, chaosRng_.unit())
+                                                : chaosValue(*range, chaos, chaosRng_.unit());
         store(index, v);
         chaosChanged_ |= 1u << index;
     };

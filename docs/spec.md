@@ -138,23 +138,16 @@ Same model as Beatality. Logic lives in the **engine**; when chaos changes a par
   | chaos chaos | `chaosLoop`, `chaosBeat` | — |
 - Toggles and enums (legato, retrig, trigger type) are never changed by chaos.
 
-### 5.1 `chaos-ranges.json` (separate file)
-Chaos ranges live in their own JSON at repo root, loaded by the engine (embedded at build time for VST/WASM). Values for pow-of-2 params are given in **beats** in the file and converted to exponents on load.
+### 5.1 `core/domain/ChaosRanges.h`
+Chaos ranges are `constexpr ChaosRange{low0, high0, low1, high1}` constants in `core/domain/ChaosRanges.h` (same as Beatality's `ChaosRanges.h`). Pow-of-2 params are given as **exponents** (n = 2^n beats, or loops for `chaosLoop`).
 
-```json
-{
-  "version": 1,
-  "ranges": {
-    "noteLengthMin": { "chaos0": [0.25, 8],    "chaos1": [0.0625, 1] },
-    "noteLengthMax": { "chaos0": [0.25, 8],    "chaos1": [0.0625, 1] },
-    "sustainMin":    { "chaos0": [0.25, 8],    "chaos1": [0.03125, 16] },
-    "sustainMax":    { "chaos0": [0.25, 8],    "chaos1": [0.03125, 16] },
-    "swing":         { "chaos0": [0, 0.2],     "chaos1": [0, 1] },
-    "chaosLoop":     { "chaos0": [1, 8],       "chaos1": [0.125, 1] },
-    "chaosBeat":     { "chaos0": [2, 32],      "chaos1": [0.125, 2] }
-  }
-}
-```
+| Param | Chaos 0 | Chaos 1 | Constant (exponents) |
+|---|---|---|---|
+| `noteLengthMin` / `noteLengthMax` | 1/4 … 8 beats | 1/16 … 1 beat | `{-2, 3, -4, 0}` |
+| `sustainMin` / `sustainMax` | 1/4 … 8 beats | 1/32 … 16 beats | `{-2, 3, -5, 4}` |
+| `swing` | 0 … 0.2 | 0 … 1 | `{0, 0.2, 0, 1}` |
+| `chaosLoop` | 1 … 8 loops | 1/8 … 1 loop | `{0, 3, -3, 0}` |
+| `chaosBeat` | 2 … 32 beats | 1/8 … 2 beats | `{1, 5, -3, 1}` |
 
 ---
 
@@ -200,7 +193,7 @@ Defaults are proposals — adjust freely.
 
 Commit and push after every step.
 
-1. **Repo + base classes** — clone layout from BananaChords: `core/domain` (Rng, Sequences, TimeTable, Chaos, ChaosRanges), `core/engine` (Engine), `params.json`, `chaos-ranges.json`, CMake, pnpm workspace, unit tests for sequence generation and time-table lookup.
+1. **Repo + base classes** — clone layout from BananaChords: `core/domain` (Rng, Sequences, TimeTable, Chaos, ChaosRanges), `core/engine` (Engine), `params.json`, CMake, pnpm workspace, unit tests for sequence generation and time-table lookup.
 2. **Default-style UI + standalone web build** — WASM engine + simple UI exposing all params. Demo host: a fake DAW playhead that plays random 3–4-note chords; arpeggiator output drives a simple sine synth (copy the sine generator from IvanDAW).
 3. **Designed UI** — apply the design docs (provided later). Rebuild web version.
 4. **VST** (Windows) and **Mac** builds — per `plugin-dev/04-vst-host.md`.
