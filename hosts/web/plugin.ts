@@ -1,5 +1,6 @@
 // Choco Arpegio for IvanDAW: the Web Plugin API v2 entry (default export: PluginFactory).
-// MIDI generator: the engine runs on the main thread, rendered LOOKAHEAD ahead by a ticker.
+// MIDI generator: the engine runs on the main thread, rendered LOOKAHEAD ahead by its own ticker,
+// or by the host through render(until) when the host drives it.
 
 import {
   createTicker,
@@ -170,7 +171,8 @@ const factory: PluginFactory = {
     };
 
     let disposed = false;
-    const instance: PluginInstance = {
+    // render() is in PluginInstance from ivandaw-core v0.3.0; the intersection keeps it compiling on v0.2.0.
+    const instance: PluginInstance & { render(until: number): void } = {
       ports,
       latency: 0,
       tail: 0,
@@ -238,6 +240,7 @@ const factory: PluginFactory = {
         unmountSkin?.();
         unmountSkin = null;
       },
+      render: (until: number) => driver.render(until),
       suspend: () => driver.suspend(),
       resume: () => driver.resume(),
       dispose() {

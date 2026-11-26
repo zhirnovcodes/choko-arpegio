@@ -30,6 +30,9 @@ export interface Driver {
   beatAt(time: number): number | null;
   /** Note-offs for everything sounding, at `time` or just after the last note-on of that pitch. */
   allOff(time: number): void;
+  /** Host-driven rendering: renders up to `until` and emits before returning. The first call stops the
+   *  driver's own ticker for good. */
+  render(until: number): void;
   suspend(): void;
   resume(): void;
   dispose(): void;
@@ -47,6 +50,9 @@ export function createDriver(d: DriverDeps): Driver {
   let seq = 0;
   const order = new WeakMap<Queued, number>();
   let ticker: Ticker | null = null;
+  /** The host calls render(): the own ticker never runs again. */
+  let hostDriven = false;
+  let suspended = false;
   let anchor: { time: number; state: TransportState } | null = null;
   /** The engine's play state, as of the end of the rendered window. */
   let playing = false;
@@ -83,9 +89,9 @@ export function createDriver(d: DriverDeps): Driver {
     }
   };
 
-  const tick = () => {
+  /** Renders [rendered, until) and emits. */
+  const renderTo = (until: number) => {
     const now = d.now();
-    const until = now + d.lookahead;
     if (rendered < now) rendered = now; // after a stall: skip, never burst
     // Stopped: render nothing ahead, so a Play booked in the next LOOKAHEAD lands on its exact frame.
     if (!playing) {
@@ -141,7 +147,10 @@ export function createDriver(d: DriverDeps): Driver {
     emitOut(Math.max(time, d.now()));
   };
 
+  const tick = () => renderTo(d.now() + d.lookahead);
+
   const start = () => {
+    if (hostDriven || suspended) return;
     if (ticker === null) {
       ticker = d.createTicker(d.tickMs, tick);
       tick();
@@ -177,13 +186,23 @@ export function createDriver(d: DriverDeps): Driver {
     allOff(time) {
       offNow(time);
     },
+    render(until) {
+      if (!hostDriven) {
+        hostDriven = true;
+        ticker?.stop();
+        ticker = null;
+      }
+      if (!suspended) renderTo(until);
+    },
     suspend() {
+      suspended = true;
       ticker?.stop();
       ticker = null;
       offNow(d.now());
     },
     resume() {
-      start();
+      suspended = false;
+      start(); // does nothing when host-driven
     },
     dispose() {
       ticker?.stop();

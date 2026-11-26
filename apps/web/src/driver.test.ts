@@ -59,6 +59,10 @@ function rig(seed = 1) {
         tick?.();
       }
     },
+    /** Move the clock without ticking, as the host does between its own render() calls. */
+    advance(seconds: number) {
+      now += seconds;
+    },
     get now() {
       return now;
     },
@@ -182,5 +186,86 @@ describe('driver', () => {
     r.driver.schedule([{ type: 'transport', time: 1, state: state(true, 4, 60) }]);
     expect(r.driver.beatAt(3)).toBeCloseTo(6, 9);
     r.driver.dispose();
+  });
+});
+
+describe('driver, host-driven render(until)', () => {
+  it('stops its own ticker after the first render()', () => {
+    const r = rig(8);
+    expect(r.ticking).toBe(true);
+    r.driver.render(0.1);
+    expect(r.ticking).toBe(false);
+    r.driver.schedule([{ type: 'transport', time: 0.2, state: state(true, 0) }, ...notes(0.2, [60, 64, 67])]);
+    r.run(1); // the fake ticker would fire 40 times, if it were still there
+    expect(r.events).toEqual([]);
+    r.driver.dispose();
+  });
+
+  it('emits the beat-0 notes during the call, at t0 exactly', () => {
+    const r = rig(9);
+    r.driver.render(0.1);
+    r.advance(0.05);
+    const t0 = 0.12;
+    r.driver.schedule([{ type: 'transport', time: t0, state: state(true, 0) }, ...notes(t0, [60, 64, 67])]);
+    r.driver.render(t0 + 0.1);
+    const ons = r.events.filter(isOn);
+    expect(ons.length).toBeGreaterThan(0);
+    expect(Math.abs(ons[0].time - t0)).toBeLessThanOrEqual(1 / RATE);
+    r.driver.dispose();
+  });
+
+  it('a chord from an upstream plugin lands on time (the chain case)', () => {
+    // Playing, no chord. Each pass: the upstream plugin books its chord inside [edge, until) of this
+    // pass, then the host renders us to the same until. Our edge is behind the chord, so it is on its frame.
+    const r = rig(10);
+    r.driver.schedule([{ type: 'transport', time: 0, state: state(true, 0) }]);
+    let edge = 0;
+    for (let i = 0; i < 57; i++) {
+      edge = r.now + 0.1;
+      r.driver.render(edge);
+      r.advance(0.025);
+    }
+    expect(r.events).toEqual([]);
+    const t0 = 1.5; // beat 3 at 120 BPM, in the next pass's window [edge, until)
+    const until = r.now + 0.1;
+    expect(t0).toBeGreaterThanOrEqual(edge - 1e-9);
+    expect(t0).toBeLessThan(until);
+    r.driver.schedule(notes(t0, [60, 64, 67]));
+    r.driver.render(until);
+    const ons = r.events.filter(isOn);
+    expect(ons.length).toBeGreaterThan(0);
+    expect(Math.abs(ons[0].time - t0)).toBeLessThanOrEqual(1 / RATE);
+    r.driver.dispose();
+  });
+
+  it('a repeated until renders nothing', () => {
+    const r = rig(11);
+    r.driver.schedule([{ type: 'transport', time: 0, state: state(true, 0) }, ...notes(0, [60, 64, 67])]);
+    r.driver.render(0.5);
+    const count = r.events.length;
+    expect(count).toBeGreaterThan(0);
+    r.driver.render(0.5);
+    expect(r.events.length).toBe(count);
+    r.driver.dispose();
+  });
+
+  it('suspend silences render(); resume renders again without a ticker', () => {
+    const r = rig(12);
+    r.driver.schedule([{ type: 'transport', time: 0, state: state(true, 0) }, ...notes(0, [60, 64, 67])]);
+    r.driver.render(0.1);
+    r.driver.suspend();
+    checkBalanced(r.events);
+    const count = r.events.length;
+    r.advance(0.2);
+    r.driver.render(0.4);
+    expect(r.events.length).toBe(count);
+    r.driver.resume();
+    expect(r.ticking).toBe(false);
+    // suspend forgot the held chord; a new one plays again.
+    r.driver.schedule(notes(0.45, [62, 65]));
+    r.driver.render(0.6);
+    expect(r.events.filter(isOn).length).toBeGreaterThan(r.events.slice(0, count).filter(isOn).length);
+    r.driver.dispose();
+    checkBalanced(r.events);
   });
 });
